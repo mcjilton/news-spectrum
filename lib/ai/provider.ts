@@ -1,14 +1,7 @@
 import "server-only";
-import { mockProvider } from "@/lib/ai/mock-provider";
-import type { ModelProvider } from "@/lib/ai/types";
-import { serverConfig } from "@/lib/config";
+import { getRuntimeModelProvider } from "./runtime-provider";
+import type { ModelProvider } from "./types";
 
 export function getModelProvider(): ModelProvider {
-  if (serverConfig.modelProvider === "mock") {
-    return mockProvider;
-  }
-
-  throw new Error(
-    `Model provider "${serverConfig.modelProvider}" is configured but not implemented yet.`,
-  );
+  return getRuntimeModelProvider();
 }

@@ -288,6 +288,8 @@ secrets/
 *.jsonl
 exports/
 data/
+!supabase/migrations/
+!supabase/migrations/*.sql
 
 # Logs and runtime output
 logs/

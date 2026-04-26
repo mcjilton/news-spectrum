@@ -2,18 +2,23 @@
   "name": "news-spectrum",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ingest:manual": "node --experimental-strip-types scripts/jobs/ingest-manual.ts",
+    "analyze:manual": "node --experimental-strip-types scripts/jobs/analyze-manual.ts",
+    "publish:manual": "node --experimental-strip-types scripts/jobs/publish-manual.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
     "next": "^16.2.4",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "server-only": "^0.0.1"
   },
   "overrides": {
     "postcss": "^8.5.10"

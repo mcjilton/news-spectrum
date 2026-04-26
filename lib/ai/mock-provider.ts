@@ -1,4 +1,4 @@
-import { serverConfig } from "@/lib/config";
+import { runtimeConfig } from "../runtime-config.ts";
 import type {
   EmbedTextInput,
   EmbeddingResult,
@@ -8,12 +8,12 @@ import type {
   ModelRunMetadata,
   ModelTask,
   TextModelResult,
-} from "@/lib/ai/types";
+} from "./types.ts";
 
 function metadata(task: ModelTask, sourceIds: string[] = []): ModelRunMetadata {
   return {
     provider: "mock",
-    model: task === "embed" ? serverConfig.modelEmbeddings : serverConfig.modelSummary,
+    model: task === "embed" ? runtimeConfig.modelEmbeddings : runtimeConfig.modelSummary,
     task,
     promptVersion: "mock-v1",
     sourceIds,

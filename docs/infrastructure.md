@@ -1,0 +1,68 @@
+# Infrastructure Plan
+
+## Initial Target
+
+- Vercel hosts the read-only Next.js app.
+- Supabase hosts Postgres and `pgvector`.
+- Manual private jobs run from a trusted developer machine or Codespace.
+- Readers never trigger writes, ingestion, analysis, model calls, queues, or schedules.
+
+## Deployment Modes
+
+### `DATA_MODE=seed`
+
+Current prototype mode. The app reads local seeded data from `lib/events.ts`.
+
+### `DATA_MODE=imported`
+
+Next target. The app reads already-published event analysis from Supabase.
+Private jobs write the data.
+
+### `DATA_MODE=live`
+
+Future mode. Private scheduled jobs discover and analyze stories with strict
+budget controls. The public app remains read-only.
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Apply migrations in `supabase/migrations`.
+3. Confirm `vector` extension is enabled.
+4. Store secrets outside git.
+5. Use the anon key only for public read access.
+6. Use the service-role key only in private jobs.
+
+## Vercel Setup
+
+Initial app env:
+
+```text
+DATA_MODE=seed
+MODEL_PROVIDER=mock
+DISABLE_LIVE_ANALYSIS=true
+ENABLE_JOB_ENDPOINTS=false
+```
+
+When moving to imported data, add:
+
+```text
+DATA_MODE=imported
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+```
+
+Do not add service-role keys or model provider keys to any environment used by
+reader-facing code.
+
+## Private Job Runtime
+
+Manual scripts are intentionally local/private entrypoints:
+
+```bash
+npm run ingest:manual
+npm run analyze:manual
+npm run publish:manual
+```
+
+They currently fail closed until live analysis is explicitly enabled and
+required server secrets are present.
