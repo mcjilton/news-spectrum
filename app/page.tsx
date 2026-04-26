@@ -16,10 +16,17 @@ import {
   type EventSource,
   type SpectrumBucket,
 } from "@/lib/events";
+import { serverConfig } from "@/lib/config";
 
 const buckets: SpectrumBucket[] = ["left", "center", "right"];
 
 export const revalidate = 300;
+
+const dataModeLabels = {
+  seed: "Seed data",
+  imported: "Supabase import",
+  live: "Live pipeline",
+} as const;
 
 function countBucketSources(
   sources: EventSource[],
@@ -57,8 +64,12 @@ export default async function HomePage() {
         </div>
         <div className="heroPanel" aria-label="System status">
           <div className="metric">
-            <span>Seed events</span>
+            <span>Published events</span>
             <strong>{events.length}</strong>
+          </div>
+          <div className="metric">
+            <span>Data source</span>
+            <strong>{dataModeLabels[serverConfig.dataMode]}</strong>
           </div>
           <div className="metric">
             <span>Analysis mode</span>

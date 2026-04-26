@@ -35,6 +35,12 @@ npm run build
 npm audit --omit=dev
 ```
 
+Imported Supabase data can be checked through the public/RLS path with:
+
+```bash
+npm run verify:imported
+```
+
 ## Deployment Notes
 
 The public app is read-only. Readers can view generated analysis and source
