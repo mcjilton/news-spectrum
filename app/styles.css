@@ -1,0 +1,639 @@
+:root {
+  --bg: #f5f7f8;
+  --surface: #ffffff;
+  --surface-strong: #eef2f4;
+  --ink: #142025;
+  --muted: #5f6f77;
+  --line: #d9e1e5;
+  --blue: #2c6fbb;
+  --red: #ba4b44;
+  --green: #37775f;
+  --amber: #a66b1f;
+  --shadow: 0 18px 45px rgba(20, 32, 37, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 20px 0 56px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+}
+
+.brand,
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 750;
+}
+
+.brandMark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.hero,
+.detailHero {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 360px);
+  gap: 28px;
+  align-items: stretch;
+  padding: 42px 0 28px;
+}
+
+.heroCopy h1,
+.detailHero h1 {
+  max-width: 860px;
+  margin: 0;
+  font-size: clamp(2.1rem, 4vw, 4.35rem);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+.detailHero h1 {
+  font-size: clamp(2rem, 3vw, 3.2rem);
+}
+
+.eyebrow,
+.topic,
+.bucketLabel {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lede {
+  max-width: 780px;
+  margin: 18px 0 0;
+  color: #42535b;
+  font-size: 1.08rem;
+  line-height: 1.6;
+}
+
+.heroPanel,
+.scorePanel {
+  display: grid;
+  gap: 10px;
+  align-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.metric,
+.scorePanel div {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 50px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.metric:last-child,
+.scorePanel div:last-child {
+  border-bottom: 0;
+}
+
+.metric strong,
+.scorePanel strong {
+  color: var(--ink);
+  font-size: 1.02rem;
+  text-align: right;
+}
+
+.scorePanel span {
+  flex: 1;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  gap: 10px;
+  margin: 4px 0 18px;
+}
+
+.searchBox,
+.iconButton {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.searchBox {
+  gap: 10px;
+  padding: 0 14px;
+}
+
+.iconButton {
+  justify-content: center;
+  cursor: pointer;
+}
+
+.eventGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.eventCard,
+.analysisBlock,
+.compareCard,
+.methodNote {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.eventCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+}
+
+.eventHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.eventHeader h2,
+.analysisBlock h2,
+.sourceSection h2,
+.methodNote h2,
+.spectrumCompare h2 {
+  margin: 0;
+}
+
+.eventHeader h2 {
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+
+.summary {
+  margin: 0;
+  color: #42535b;
+  line-height: 1.55;
+}
+
+.status,
+.prototypeBadge {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.status.developing {
+  color: var(--amber);
+}
+
+.status.monitoring {
+  color: var(--green);
+}
+
+.cardStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Keep stat chips scoped to direct children so nested tooltip spans cannot
+   inherit chip height or padding and distort the event card layout. */
+.cardStats > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 9px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.statWithTooltip {
+  cursor: help;
+}
+
+.statWithTooltip svg {
+  flex: 0 0 auto;
+}
+
+.tooltip {
+  position: absolute;
+  box-sizing: border-box;
+  z-index: 5;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: block;
+  flex: none;
+  width: 290px;
+  max-width: min(80vw, 290px);
+  height: auto;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  opacity: 0;
+  padding: 12px 14px;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.cardStats span.tooltip,
+.scorePanel span.tooltip {
+  align-items: normal;
+  display: block;
+  flex: none;
+  gap: 0;
+  height: auto;
+  justify-content: initial;
+  min-height: 0;
+  padding: 12px 14px;
+  white-space: normal;
+  width: 290px;
+}
+
+.statWithTooltip:hover .tooltip,
+.statWithTooltip:focus .tooltip,
+.statWithTooltip:focus-within .tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.spectrumStrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.coverageBlock {
+  display: grid;
+  gap: 6px;
+}
+
+.coverageBlock p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.spectrumStrip span {
+  display: grid;
+  min-height: 34px;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.bucketLeft {
+  --bucket: var(--blue);
+  --bucket-bg: #e8f1fb;
+  --bucket-line: #b9d3ee;
+}
+
+.bucketCenter {
+  --bucket: var(--green);
+  --bucket-bg: #e8f4ef;
+  --bucket-line: #b8d8ca;
+}
+
+.bucketRight {
+  --bucket: var(--red);
+  --bucket-bg: #f8ecea;
+  --bucket-line: #ecc2be;
+}
+
+.spectrumStrip .bucketLeft,
+.compareCard.bucketLeft {
+  color: var(--blue);
+  background: var(--bucket-bg);
+}
+
+.spectrumStrip .bucketCenter,
+.compareCard.bucketCenter {
+  color: var(--green);
+  background: var(--bucket-bg);
+}
+
+.spectrumStrip .bucketRight,
+.compareCard.bucketRight {
+  color: var(--red);
+  background: var(--bucket-bg);
+}
+
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+}
+
+.infoBand {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.infoItem {
+  display: flex;
+  gap: 12px;
+  color: #42535b;
+}
+
+.infoItem h2 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.infoItem p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.detailShell {
+  max-width: 1120px;
+}
+
+.twoColumn {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 8px 0 18px;
+}
+
+.analysisBlock {
+  padding: 18px;
+}
+
+.warnBlock {
+  border-color: #ead2a8;
+  background: #fffaf1;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.factList {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+  color: #34454d;
+  line-height: 1.55;
+}
+
+.spectrumCompare,
+.sourceSection {
+  margin-top: 22px;
+}
+
+.compareGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.compareCard {
+  border-color: var(--bucket-line);
+  padding: 16px;
+}
+
+.compareCard h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+
+.compareCard p {
+  margin: 0;
+  color: #34454d;
+  line-height: 1.55;
+}
+
+.tagGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.tagGroup span,
+.framePill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 5px 8px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.languageList {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  color: #34454d;
+  font-size: 0.9rem;
+}
+
+.sourceBucket {
+  margin-top: 16px;
+}
+
+.sourceBucket h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.sourceTable {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.sourceRow {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.75fr) minmax(260px, 1.35fr) auto 18px;
+  gap: 12px;
+  align-items: center;
+  min-height: 66px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+}
+
+.sourceRow:last-child {
+  border-bottom: 0;
+}
+
+.sourceRow span:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.sourceRow small {
+  color: var(--muted);
+}
+
+.methodNote {
+  margin-top: 24px;
+  padding: 18px;
+  color: #42535b;
+}
+
+.methodNote p {
+  margin: 8px 0 0;
+  line-height: 1.55;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    width: min(100% - 24px, 1180px);
+    padding-top: 14px;
+  }
+
+  .navLinks {
+    display: none;
+  }
+
+  .hero,
+  .detailHero,
+  .eventGrid,
+  .infoBand,
+  .twoColumn,
+  .compareGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero,
+  .detailHero {
+    padding-top: 30px;
+  }
+
+  .cardStats {
+    grid-template-columns: 1fr;
+  }
+
+  .sourceRow {
+    grid-template-columns: 1fr 18px;
+  }
+
+  .sourceRow span:nth-child(2),
+  .sourceRow .framePill {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .eventHeader,
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .prototypeBadge {
+    max-width: 100%;
+  }
+}

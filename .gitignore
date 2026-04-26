@@ -16,6 +16,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+!/lib/
+!/lib/**
 parts/
 sdist/
 var/
@@ -149,6 +151,12 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .envrc
 .venv
 env/
@@ -216,3 +224,85 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local deployment / platform state
+.vercel/
+.netlify/
+.wrangler/
+.turbo/
+
+# Local Supabase state and generated artifacts
+.supabase/
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+
+# Secrets, keys, and credentials
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.asc
+*.gpg
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.kubeconfig
+kubeconfig
+credentials.json
+service-account*.json
+*-service-account.json
+google-credentials*.json
+firebase-adminsdk*.json
+*.secret
+*.secrets
+secrets/
+.secrets/
+
+# Database dumps and local data exports
+*.dump
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.csv
+*.ndjson
+*.jsonl
+exports/
+data/
+
+# Logs and runtime output
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.codex
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
