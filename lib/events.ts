@@ -6,6 +6,8 @@ import {
   Scale,
   type LucideIcon,
 } from "lucide-react";
+import { createPublicSupabaseClient } from "@/lib/supabase/runtime";
+import { serverConfig } from "@/lib/config";
 
 export type SpectrumBucket = "left" | "center" | "right";
 
@@ -53,6 +55,64 @@ export type NewsEvent = {
   disputedOrVariable: string[];
   spectrum: SpectrumAnalysis[];
   sources: EventSource[];
+};
+
+type ImportedSourceRow = {
+  name: string;
+  spectrum: "left" | "lean_left" | "center" | "lean_right" | "right" | "unknown";
+  source_type:
+    | "wire"
+    | "mainstream"
+    | "partisan"
+    | "local"
+    | "opinion_heavy"
+    | "policy"
+    | "state_media"
+    | "unknown";
+};
+
+type ImportedArticleRow = {
+  id: string;
+  url: string;
+  title: string;
+  published_at: string | null;
+  metadata: {
+    frame?: string;
+    rating?: string;
+    localId?: string;
+  } | null;
+  sources: ImportedSourceRow | ImportedSourceRow[] | null;
+};
+
+type ImportedEventRow = {
+  id: string;
+  slug: string;
+  title: string;
+  topic: string;
+  status: NewsEvent["status"];
+  summary: string | null;
+  confidence: number;
+  divergence: number;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  published_at: string | null;
+  metadata: {
+    sharedFacts?: string[];
+    disputedOrVariable?: string[];
+    timespan?: string;
+    updatedAt?: string;
+  } | null;
+  frames: Array<{
+    bucket: "left" | "center" | "right" | "lean_left" | "lean_right" | "unknown";
+    label: string;
+    summary: string;
+    emphasis: string[] | null;
+    language: string[] | null;
+    source_article_ids: string[] | null;
+  }>;
+  event_articles: Array<{
+    articles: ImportedArticleRow | ImportedArticleRow[] | null;
+  }>;
 };
 
 export const bucketLabels: Record<SpectrumBucket, string> = {
@@ -289,7 +349,174 @@ export const events: NewsEvent[] = [
   },
 ];
 
-export function getEvent(slug: string) {
+function mapSpectrumBucket(
+  bucket: ImportedEventRow["frames"][number]["bucket"] | ImportedSourceRow["spectrum"],
+): SpectrumBucket {
+  if (bucket === "left" || bucket === "lean_left") {
+    return "left";
+  }
+
+  if (bucket === "right" || bucket === "lean_right") {
+    return "right";
+  }
+
+  return "center";
+}
+
+function mapSourceType(type: ImportedSourceRow["source_type"]): SourceType {
+  if (type === "opinion_heavy") {
+    return "opinion-heavy";
+  }
+
+  if (
+    type === "wire" ||
+    type === "mainstream" ||
+    type === "partisan" ||
+    type === "local" ||
+    type === "policy"
+  ) {
+    return type;
+  }
+
+  return "mainstream";
+}
+
+function firstRelated<T>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+}
+
+function formatPublishedTime(value: string | null) {
+  if (!value) {
+    return "Unknown";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function mapImportedEvent(row: ImportedEventRow): NewsEvent {
+  const sources = row.event_articles
+    .map((eventArticle): EventSource | null => {
+      const article = firstRelated(eventArticle.articles);
+      const source = firstRelated(article?.sources ?? null);
+
+      if (!article || !source) {
+        return null;
+      }
+
+      const bucket = mapSpectrumBucket(source.spectrum);
+
+      return {
+        id: article.metadata?.localId ?? article.id,
+        outlet: source.name,
+        title: article.title,
+        url: article.url,
+        publishedAt: formatPublishedTime(article.published_at),
+        bucket,
+        rating: article.metadata?.rating ?? bucketLabels[bucket],
+        type: mapSourceType(source.source_type),
+        frame: article.metadata?.frame ?? "Coverage",
+      };
+    })
+    .filter((source): source is EventSource => source !== null);
+
+  return {
+    slug: row.slug,
+    title: row.title,
+    topic: row.topic,
+    status: row.status,
+    updatedAt: row.metadata?.updatedAt ?? "Imported analysis",
+    summary: row.summary ?? "",
+    confidence: row.confidence,
+    divergence: row.divergence,
+    sourceCount: sources.length,
+    timespan: row.metadata?.timespan ?? "Published analysis",
+    sharedFacts: row.metadata?.sharedFacts ?? [],
+    disputedOrVariable: row.metadata?.disputedOrVariable ?? [],
+    spectrum: row.frames.map((frame) => ({
+      bucket: mapSpectrumBucket(frame.bucket),
+      label: frame.label,
+      summary: frame.summary,
+      emphasis: frame.emphasis ?? [],
+      language: frame.language ?? [],
+      sourceIds: frame.source_article_ids ?? [],
+    })),
+    sources,
+  };
+}
+
+async function getImportedEvents() {
+  const supabase = createPublicSupabaseClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select(
+      `
+        id,
+        slug,
+        title,
+        topic,
+        status,
+        summary,
+        confidence,
+        divergence,
+        first_seen_at,
+        last_seen_at,
+        published_at,
+        metadata,
+        frames (
+          bucket,
+          label,
+          summary,
+          emphasis,
+          language,
+          source_article_ids
+        ),
+        event_articles (
+          articles (
+            id,
+            url,
+            title,
+            published_at,
+            metadata,
+            sources (
+              name,
+              spectrum,
+              source_type
+            )
+          )
+        )
+      `,
+    )
+    .eq("is_published", true)
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to load imported events: ${error.message}`);
+  }
+
+  return (data as unknown as ImportedEventRow[]).map(mapImportedEvent);
+}
+
+export async function getEvents() {
+  if (serverConfig.dataMode === "imported") {
+    return getImportedEvents();
+  }
+
+  return events;
+}
+
+export async function getEvent(slug: string) {
+  const allEvents = await getEvents();
+  return allEvents.find((event) => event.slug === slug);
+}
+
+export function getSeedEvent(slug: string) {
   return events.find((event) => event.slug === slug);
 }
 

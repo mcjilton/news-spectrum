@@ -21,6 +21,8 @@ import {
 
 const buckets: SpectrumBucket[] = ["left", "center", "right"];
 
+export const revalidate = 300;
+
 export function generateStaticParams() {
   return events.map((event) => ({ slug: event.slug }));
 }
@@ -31,7 +33,7 @@ export default async function EventPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const event = getEvent(slug);
+  const event = await getEvent(slug);
 
   if (!event) {
     notFound();

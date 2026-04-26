@@ -9,18 +9,28 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { bucketClasses, bucketLabels, events, type SpectrumBucket } from "@/lib/events";
+import {
+  bucketClasses,
+  bucketLabels,
+  getEvents,
+  type EventSource,
+  type SpectrumBucket,
+} from "@/lib/events";
 
 const buckets: SpectrumBucket[] = ["left", "center", "right"];
 
+export const revalidate = 300;
+
 function countBucketSources(
-  sources: (typeof events)[number]["sources"],
+  sources: EventSource[],
   bucket: SpectrumBucket,
 ) {
   return sources.filter((source) => source.bucket === bucket).length;
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const events = await getEvents();
+
   return (
     <main className="shell">
       <header className="topbar">
