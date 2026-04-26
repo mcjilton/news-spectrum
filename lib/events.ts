@@ -6,8 +6,8 @@ import {
   Scale,
   type LucideIcon,
 } from "lucide-react";
-import { createPublicSupabaseClient } from "@/lib/supabase/runtime";
-import { serverConfig } from "@/lib/config";
+import { runtimeConfig } from "./runtime-config.ts";
+import { createPublicSupabaseClient } from "./supabase/runtime.ts";
 
 export type SpectrumBucket = "left" | "center" | "right";
 
@@ -504,7 +504,7 @@ async function getImportedEvents() {
 }
 
 export async function getEvents() {
-  if (serverConfig.dataMode === "imported") {
+  if (runtimeConfig.dataMode === "imported") {
     return getImportedEvents();
   }
 

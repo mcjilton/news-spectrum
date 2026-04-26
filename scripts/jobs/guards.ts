@@ -14,6 +14,20 @@ export function assertPrivateJobsEnabled(jobName: string) {
   }
 }
 
+export function assertManualPublishEnabled(jobName: string) {
+  if (runtimeConfig.dataMode !== "imported") {
+    throw new Error(
+      `${jobName} blocked: DATA_MODE must be imported so published rows can be read through the Supabase public/RLS path.`,
+    );
+  }
+
+  if (!runtimeConfig.supabaseUrl || !runtimeConfig.supabaseServiceRoleKey) {
+    throw new Error(
+      `${jobName} blocked: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for private publishing.`,
+    );
+  }
+}
+
 export function printJobBudget() {
   console.log("Job budget caps:");
   console.log(`- max events per run: ${runtimeConfig.maxEventsPerRun}`);
