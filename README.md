@@ -83,6 +83,12 @@ tokens:
 npm run enrich:manual
 ```
 
+Selected enriched candidates can be published manually:
+
+```bash
+npm run publish:candidate -- <candidate-slug>
+```
+
 ## Deployment Notes
 
 The public app is read-only. Readers can view generated analysis and source

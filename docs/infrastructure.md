@@ -65,6 +65,7 @@ npm run enrich:manual
 npm run inspect:candidates
 npm run inspect:enriched
 npm run candidates:reset
+npm run publish:candidate -- <candidate-slug>
 npm run publish:manual
 ```
 
@@ -97,6 +98,10 @@ metadata. It does not write data.
 
 `candidates:reset` deletes only unpublished candidate events where
 `metadata.candidate = true`. Published events are not touched.
+
+`publish:candidate` publishes exactly one enriched candidate by slug. It refuses
+to publish unless the event is unpublished, marked as a candidate, enriched, and
+has linked articles, claims, and frames.
 
 `publish:manual` publishes already-prepared event analysis through the
 Supabase/RLS read path.
