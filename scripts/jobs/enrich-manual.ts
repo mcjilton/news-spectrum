@@ -39,7 +39,7 @@ type EnrichmentFrame = {
   label: string;
   summary: string;
   emphasis: string[];
-  language: string[];
+  loadedLanguage: string[];
   sourceArticleIds: string[];
 };
 
@@ -102,14 +102,18 @@ function bucketForSpectrum(spectrum: SourceSpectrum): SpectrumBucket {
 }
 
 function fallbackFrames(articles: ArticleRow[]): EnrichmentFrame[] {
-  const buckets: SpectrumBucket[] = ["left", "center", "right"];
+  const buckets = [
+    ...new Set(
+      articles.map((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown")),
+    ),
+  ];
 
   return buckets.map((bucket) => ({
     bucket,
     label: `Draft ${bucket} framing`,
     summary: "No model framing was returned for this bucket.",
     emphasis: [],
-    language: [],
+    loadedLanguage: [],
     sourceArticleIds: articles
       .filter((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown") === bucket)
       .map((article) => article.id),
@@ -135,7 +139,7 @@ function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, ar
       label: frame.label || `Draft ${frame.bucket} framing`,
       summary: frame.summary || "Draft framing summary unavailable.",
       emphasis: coerceTextList(frame.emphasis).slice(0, 8),
-      language: coerceTextList(frame.language).slice(0, 8),
+      loadedLanguage: coerceTextList(frame.loadedLanguage).slice(0, 8),
       sourceArticleIds: coerceTextList(frame.sourceArticleIds).filter((articleId) =>
         articles.some((article) => article.id === articleId),
       ),
@@ -144,8 +148,18 @@ function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, ar
   };
 }
 
-function validateEnrichment(value: unknown, articleIds: string[]) {
+function validateEnrichment(value: unknown, articles: ArticleRow[]) {
   const errors: string[] = [];
+  const articleIds = articles.map((article) => article.id);
+  const representedBuckets = new Set(
+    articles.map((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown")),
+  );
+  const articleBucketById = new Map(
+    articles.map((article) => [
+      article.id,
+      bucketForSpectrum(getSource(article)?.spectrum ?? "unknown"),
+    ]),
+  );
 
   if (!isRecord(value)) {
     return ["enrichment must be an object"];
@@ -169,6 +183,29 @@ function validateEnrichment(value: unknown, articleIds: string[]) {
     }
   }
 
+  if (Array.isArray(value.sharedFacts)) {
+    if (value.sharedFacts.length < 3 || value.sharedFacts.length > 6) {
+      errors.push("sharedFacts must contain 3 to 6 concrete facts");
+    }
+
+    const genericFactPatterns = [
+      /multiple sources/i,
+      /article metadata/i,
+      /published coverage/i,
+      /candidate event/i,
+      /source material/i,
+    ];
+
+    for (const [index, fact] of value.sharedFacts.entries()) {
+      if (
+        typeof fact === "string" &&
+        genericFactPatterns.some((pattern) => pattern.test(fact))
+      ) {
+        errors.push(`sharedFacts[${index}] is too generic`);
+      }
+    }
+  }
+
   if (!Array.isArray(value.frames)) {
     errors.push("frames must be an array");
   } else {
@@ -183,6 +220,8 @@ function validateEnrichment(value: unknown, articleIds: string[]) {
 
       if (typeof frame.bucket !== "string" || !allowedBuckets.has(frame.bucket)) {
         errors.push(`frames[${index}].bucket must be left, center, or right`);
+      } else if (!representedBuckets.has(frame.bucket as SpectrumBucket)) {
+        errors.push(`frames[${index}].bucket ${frame.bucket} is not represented by source articles`);
       }
 
       for (const key of ["label", "summary"] as const) {
@@ -191,7 +230,7 @@ function validateEnrichment(value: unknown, articleIds: string[]) {
         }
       }
 
-      for (const key of ["emphasis", "language", "sourceArticleIds"] as const) {
+      for (const key of ["emphasis", "loadedLanguage", "sourceArticleIds"] as const) {
         if (!Array.isArray(frame[key]) || !frame[key].every((item) => typeof item === "string")) {
           errors.push(`frames[${index}].${key} must be an array of strings`);
         }
@@ -203,6 +242,17 @@ function validateEnrichment(value: unknown, articleIds: string[]) {
       ) {
         errors.push(`frames[${index}].sourceArticleIds contains unknown article ids`);
       }
+
+      if (
+        typeof frame.bucket === "string" &&
+        allowedBuckets.has(frame.bucket) &&
+        Array.isArray(frame.sourceArticleIds) &&
+        frame.sourceArticleIds.some(
+          (articleId) => articleBucketById.get(String(articleId)) !== frame.bucket,
+        )
+      ) {
+        errors.push(`frames[${index}].sourceArticleIds must match the frame bucket`);
+      }
     }
   }
 
@@ -210,6 +260,11 @@ function validateEnrichment(value: unknown, articleIds: string[]) {
 }
 
 function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
+  const representedBuckets = [
+    ...new Set(
+      articles.map((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown")),
+    ),
+  ];
   const payload = {
     candidate: {
       slug: candidate.slug,
@@ -235,6 +290,13 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
         "Do not claim certainty beyond the provided article metadata.",
         "Do not quote article text.",
         "Keep the event unpublished.",
+        "Return 3 to 6 concrete sharedFacts about the event itself. Do not include generic facts about sources, metadata, or publication volume.",
+        "Only include frames for represented source buckets.",
+        `Represented source buckets: ${representedBuckets.join(", ")}.`,
+        "If a bucket has no sources, omit that frame entirely.",
+        "loadedLanguage means notable framing terms or charged wording from titles/metadata, not the human language of the article.",
+        "Each frame summary must explicitly reflect the available source mix and should not invent coverage from absent buckets.",
+        "sourceArticleIds must only contain article ids provided in this prompt and should match the frame bucket where possible.",
         "Return JSON matching the requested schema.",
       ],
     },
@@ -327,7 +389,7 @@ async function replaceFrames(
       label: frame.label,
       summary: frame.summary,
       emphasis: frame.emphasis,
-      language: frame.language,
+      language: frame.loadedLanguage,
       source_article_ids: frame.sourceArticleIds,
     })),
   );
@@ -461,7 +523,7 @@ async function main() {
     });
     estimatedCostUsd += runEstimatedCostUsd;
 
-    const validationErrors = validateEnrichment(result.json, articleIds);
+    const validationErrors = validateEnrichment(result.json, articles);
 
     if (validationErrors.length > 0) {
       throw new Error(`Enrichment validation failed: ${validationErrors.join("; ")}`);

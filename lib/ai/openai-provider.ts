@@ -37,13 +37,13 @@ const eventEnrichmentSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["bucket", "label", "summary", "emphasis", "language", "sourceArticleIds"],
+        required: ["bucket", "label", "summary", "emphasis", "loadedLanguage", "sourceArticleIds"],
         properties: {
           bucket: { type: "string", enum: ["left", "center", "right"] },
           label: { type: "string" },
           summary: { type: "string" },
           emphasis: { type: "array", items: { type: "string" } },
-          language: { type: "array", items: { type: "string" } },
+          loadedLanguage: { type: "array", items: { type: "string" } },
           sourceArticleIds: { type: "array", items: { type: "string" } },
         },
       },

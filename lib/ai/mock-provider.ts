@@ -52,7 +52,7 @@ export const mockProvider = {
               label: "Mock left framing",
               summary: "Mock left-bucket framing summary.",
               emphasis: ["accountability", "impact"],
-              language: ["questions", "concerns"],
+              loadedLanguage: ["questions", "concerns"],
               sourceArticleIds: input.sourceIds ?? [],
             },
             {
@@ -60,7 +60,7 @@ export const mockProvider = {
               label: "Mock center framing",
               summary: "Mock center-bucket framing summary.",
               emphasis: ["timeline", "confirmed details"],
-              language: ["reported", "officials"],
+              loadedLanguage: ["reported", "officials"],
               sourceArticleIds: input.sourceIds ?? [],
             },
             {
@@ -68,7 +68,7 @@ export const mockProvider = {
               label: "Mock right framing",
               summary: "Mock right-bucket framing summary.",
               emphasis: ["security", "response"],
-              language: ["failure", "scrutiny"],
+              loadedLanguage: ["failure", "scrutiny"],
               sourceArticleIds: input.sourceIds ?? [],
             },
           ],
