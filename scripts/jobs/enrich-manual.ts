@@ -55,11 +55,13 @@ type EventEnrichment = {
 
 type EnrichOptions = {
   dryRun: boolean;
+  refreshEnriched: boolean;
 };
 
 function parseOptions(): EnrichOptions {
   return {
     dryRun: process.argv.includes("--dry-run"),
+    refreshEnriched: process.argv.includes("--refresh-enriched"),
   };
 }
 
@@ -272,6 +274,9 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
       allowedSourceArticleIdsByFrameBucket: articleIdsByBucket,
       constraints: [
         "Do not claim certainty beyond the provided article metadata.",
+        "Use only the supplied source names, titles, URLs, and timestamps; do not infer unstated article body details.",
+        "Do not assign current or former offices, roles, motives, locations, or identities unless that exact detail appears in the supplied metadata.",
+        "Prefer cautious wording such as reports, says, alleged, suspected, or according to titles when metadata is incomplete.",
         "Do not quote article text.",
         "Keep the event unpublished.",
         "Return 3 to 6 concrete sharedFacts about the event itself. Do not include generic facts about sources, metadata, or publication volume.",
@@ -279,7 +284,7 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
         `Represented source buckets: ${representedBuckets.join(", ")}.`,
         "If a bucket has no sources, omit that frame entirely.",
         "loadedLanguage means notable framing terms or charged wording from titles/metadata, not the human language of the article.",
-        "Each frame summary must explicitly reflect the available source mix and should not invent coverage from absent buckets.",
+        "Each frame summary must explicitly reflect the available source mix and title patterns; do not invent broader themes that are not visible in titles.",
         "sourceArticleIds may be empty; the system will attach same-bucket source articles after validation.",
         "Return JSON matching the requested schema.",
       ],
@@ -289,7 +294,11 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
   return JSON.stringify(payload, null, 2);
 }
 
-async function fetchCandidates(supabase: ReturnType<typeof createServiceSupabaseClient>) {
+async function fetchCandidates(
+  supabase: ReturnType<typeof createServiceSupabaseClient>,
+  options: EnrichOptions,
+) {
+  const stages = options.refreshEnriched ? ["clustered", "enriched"] : ["clustered"];
   const { data, error } = await supabase
     .from("events")
     .select(
@@ -297,7 +306,7 @@ async function fetchCandidates(supabase: ReturnType<typeof createServiceSupabase
     )
     .eq("is_published", false)
     .eq("metadata->>candidate", "true")
-    .eq("metadata->>analysisStage", "clustered")
+    .in("metadata->>analysisStage", stages)
     .order("last_seen_at", { ascending: false, nullsFirst: false })
     .limit(runtimeConfig.maxEventsPerRun);
 
@@ -463,7 +472,7 @@ async function main() {
 
   const supabase = createServiceSupabaseClient();
   const provider = getRuntimeModelProvider();
-  const candidates = (await fetchCandidates(supabase)).slice(
+  const candidates = (await fetchCandidates(supabase, options)).slice(
     0,
     runtimeConfig.modelProvider === "mock" ? runtimeConfig.maxEventsPerRun : 1,
   );

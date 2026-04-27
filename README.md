@@ -88,11 +88,13 @@ tokens:
 ```bash
 npm run enrich:manual
 npm run enrich:manual -- --dry-run
+npm run enrich:manual -- --refresh-enriched --dry-run
 ```
 
 Live OpenAI enrichment is fail-closed. It requires `MODEL_PROVIDER=openai`, a
 real `MODEL_SUMMARY`, `OPENAI_API_KEY`, `DISABLE_LIVE_ANALYSIS=false`, and a
-positive `LLM_ESTIMATED_COST_USD_PER_CALL`.
+positive `LLM_ESTIMATED_COST_USD_PER_CALL`. Use `--refresh-enriched` only when
+an unpublished candidate changed after enrichment, such as after a manual merge.
 
 Selected enriched candidates can be published manually:
 

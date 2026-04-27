@@ -95,7 +95,9 @@ analysis, claims, and frames while keeping `is_published = false`. It should be
 run with `MODEL_PROVIDER=mock` until the data flow has been verified; the mock
 provider returns structured zero-cost output. Use `npm run enrich:manual --
 --dry-run` to call the configured provider and validate structured output
-without writing Supabase changes.
+without writing Supabase changes. Use `--refresh-enriched` only when an
+unpublished enriched candidate needs analysis refreshed after its source set
+changes, such as after a manual merge.
 
 Live OpenAI enrichment is fail-closed: it requires `MODEL_PROVIDER=openai`,
 `OPENAI_API_KEY`, a real `MODEL_SUMMARY`, `DISABLE_LIVE_ANALYSIS=false`, and a
