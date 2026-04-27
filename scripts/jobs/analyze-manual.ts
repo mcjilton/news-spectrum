@@ -82,6 +82,7 @@ const stopWords = new Set([
 ]);
 
 const weakHeadlineTokens = new Set(["live", "map", "maps", "video", "visualizing", "watch"]);
+const eventTokenPrefix = "event:";
 
 function getSource(article: ArticleRow) {
   return Array.isArray(article.sources) ? article.sources[0] : article.sources;
@@ -116,7 +117,29 @@ function titleTokens(title: string) {
       (token) => token.length >= 3 && !stopWords.has(token) && !weakHeadlineTokens.has(token),
     );
 
+  tokens.push(...inferredEventTokens(title));
+
   return new Set(tokens);
+}
+
+function inferredEventTokens(title: string) {
+  const normalized = title.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  const tokens: string[] = [];
+  const violenceTerms =
+    /\battack|attacker|breach|gunfire|gunman|manifesto|scare|security|shooting|shooter|suspect|targeted\b/;
+
+  if (
+    /\b(?:whcd|whca)\b/.test(normalized) ||
+    (/\bcorrespondent/.test(normalized) && /\bdinner\b/.test(normalized) && violenceTerms.test(normalized))
+  ) {
+    tokens.push(`${eventTokenPrefix}whcd-shooting`);
+  }
+
+  if (/\biran\b/.test(normalized) && /\bhormuz\b/.test(normalized)) {
+    tokens.push(`${eventTokenPrefix}iran-hormuz`);
+  }
+
+  return tokens;
 }
 
 function titlePhraseTokens(title: string) {
@@ -157,6 +180,16 @@ function sharedTokenCount(left: Set<string>, right: Set<string>) {
   }
 
   return count;
+}
+
+function strongEventTokenOverlap(left: Set<string>, right: Set<string>) {
+  for (const token of left) {
+    if (token.startsWith(eventTokenPrefix) && right.has(token)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function addArticle(cluster: Cluster, article: ArticleRow, tokens: Set<string>) {
@@ -259,6 +292,8 @@ function mergeRelatedClusters(clusters: Cluster[]) {
           right &&
           clustersOverlapInTime(left, right) &&
           (clusterSimilarity(left, right) >= runtimeConfig.clusterSimilarityThreshold ||
+            (strongEventTokenOverlap(left.tokens, right.tokens) &&
+              sharedTokenCount(left.tokens, right.tokens) >= 2) ||
             sharedTokenCount(left.tokens, right.tokens) >= 4)
         ) {
           mergeCluster(left, right);
@@ -296,7 +331,12 @@ function clusterArticles(inputArticles: ArticleRow[]) {
       }
     }
 
-    if (bestCluster && bestScore >= runtimeConfig.clusterSimilarityThreshold) {
+    if (
+      bestCluster &&
+      (bestScore >= runtimeConfig.clusterSimilarityThreshold ||
+        (strongEventTokenOverlap(tokens, bestCluster.tokens) &&
+          sharedTokenCount(tokens, bestCluster.tokens) >= 2))
+    ) {
       addArticle(bestCluster, article, tokens);
     } else {
       clusters.push({

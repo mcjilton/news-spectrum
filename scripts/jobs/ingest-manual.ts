@@ -215,13 +215,16 @@ async function main() {
   let failedQueries = 0;
   let discoveredArticles = 0;
 
-  for (const source of querySources) {
+  for (const [index, source] of querySources.entries()) {
     const sourceId = sourceIdsByName.get(source.name);
 
     if (!sourceId) {
       throw new Error(`Source catalog sync did not return an id for ${source.name}`);
     }
 
+    console.log(
+      `Discovering ${index + 1}/${querySources.length}: ${source.name} (${source.gdeltDomain})`,
+    );
     const articles = await fetchGdeltArticles(source).catch((error: unknown) => {
       failedQueries += 1;
       const message = error instanceof Error ? error.message : String(error);
@@ -231,6 +234,7 @@ async function main() {
 
     queriesRun += 1;
     discoveredArticles += articles.length;
+    console.log(`- provider articles: ${articles.length}`);
 
     for (const article of articles) {
       if (articlesByUrl.size >= runtimeConfig.maxArticlesPerIngestRun) {
