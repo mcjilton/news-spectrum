@@ -66,6 +66,7 @@ Candidate quality can be inspected without writing data:
 
 ```bash
 npm run inspect:candidates
+npm run inspect:enriched
 ```
 
 Unpublished candidates can be rebuilt after clustering changes:

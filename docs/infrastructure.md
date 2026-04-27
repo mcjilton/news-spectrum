@@ -63,6 +63,7 @@ npm run ingest:manual
 npm run analyze:manual
 npm run enrich:manual
 npm run inspect:candidates
+npm run inspect:enriched
 npm run candidates:reset
 npm run publish:manual
 ```
@@ -89,6 +90,10 @@ provider returns structured zero-cost output.
 `inspect:candidates` reads unpublished candidate events through the private
 service-role path and prints compact source/article details for quality review.
 It does not write data.
+
+`inspect:enriched` reads unpublished enriched candidates and prints the full
+draft package: summary, claims, frames, source coverage, and analysis-run audit
+metadata. It does not write data.
 
 `candidates:reset` deletes only unpublished candidate events where
 `metadata.candidate = true`. Published events are not touched.
