@@ -31,6 +31,52 @@ export const mockProvider = {
   },
 
   async generateJson<T>(input: GenerateJsonInput): Promise<JsonModelResult<T>> {
+    if (input.schemaName === "event-enrichment-v1") {
+      return {
+        json: {
+          title: "Mock enriched event title",
+          summary:
+            "Mock enrichment summary generated without a live model call. This validates the event enrichment write path.",
+          confidence: 70,
+          divergence: 40,
+          sharedFacts: [
+            "Multiple outlets have published coverage about the same candidate event.",
+            "The candidate event has not been reviewed for publication.",
+          ],
+          disputedOrVariable: [
+            "Mock output cannot assess real framing differences until a live provider is enabled.",
+          ],
+          frames: [
+            {
+              bucket: "left",
+              label: "Mock left framing",
+              summary: "Mock left-bucket framing summary.",
+              emphasis: ["accountability", "impact"],
+              language: ["questions", "concerns"],
+              sourceArticleIds: input.sourceIds ?? [],
+            },
+            {
+              bucket: "center",
+              label: "Mock center framing",
+              summary: "Mock center-bucket framing summary.",
+              emphasis: ["timeline", "confirmed details"],
+              language: ["reported", "officials"],
+              sourceArticleIds: input.sourceIds ?? [],
+            },
+            {
+              bucket: "right",
+              label: "Mock right framing",
+              summary: "Mock right-bucket framing summary.",
+              emphasis: ["security", "response"],
+              language: ["failure", "scrutiny"],
+              sourceArticleIds: input.sourceIds ?? [],
+            },
+          ],
+        } as T,
+        metadata: metadata(input.task, input.sourceIds),
+      };
+    }
+
     return {
       json: {
         schemaName: input.schemaName,

@@ -61,6 +61,7 @@ Manual scripts are intentionally local/private entrypoints:
 ```bash
 npm run ingest:manual
 npm run analyze:manual
+npm run enrich:manual
 npm run inspect:candidates
 npm run candidates:reset
 npm run publish:manual
@@ -79,6 +80,11 @@ LLM. It deduplicates by canonical URL and same-source title keys, requires
 distinct source domains, and runs a merge pass for closely related candidates.
 Later analysis passes can enrich these candidates with LLM-generated facts and
 framing analysis before publication.
+
+`enrich:manual` selects unpublished clustered candidates and writes draft event
+analysis, claims, and frames while keeping `is_published = false`. It should be
+run with `MODEL_PROVIDER=mock` until the data flow has been verified; the mock
+provider returns structured zero-cost output.
 
 `inspect:candidates` reads unpublished candidate events through the private
 service-role path and prints compact source/article details for quality review.

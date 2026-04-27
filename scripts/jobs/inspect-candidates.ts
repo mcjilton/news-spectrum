@@ -32,6 +32,8 @@ type CandidateRow = {
   slug: string;
   title: string;
   status: string;
+  summary: string | null;
+  divergence: number;
   confidence: number;
   first_seen_at: string | null;
   last_seen_at: string | null;
@@ -79,7 +81,7 @@ async function main() {
   const { data, error } = await supabase
     .from("events")
     .select(
-      "id,slug,title,status,confidence,first_seen_at,last_seen_at,metadata,event_articles(relevance_score,articles(id,title,url,published_at,fetched_at,sources(name,spectrum,source_type)))",
+      "id,slug,title,status,summary,confidence,divergence,first_seen_at,last_seen_at,metadata,event_articles(relevance_score,articles(id,title,url,published_at,fetched_at,sources(name,spectrum,source_type)))",
     )
     .eq("is_published", false)
     .eq("metadata->>candidate", "true")
@@ -112,8 +114,11 @@ async function main() {
     console.log(
       `   articles: ${metadata.articleCount ?? articles.length}; sources: ${
         metadata.sourceCount ?? new Set(articles.map((article) => article.sources).filter(Boolean)).size
-      }; confidence: ${candidate.confidence}`,
+      }; confidence: ${candidate.confidence}; divergence: ${candidate.divergence}`,
     );
+    if (candidate.summary) {
+      console.log(`   summary: ${candidate.summary}`);
+    }
     console.log(`   spectrum: ${formatSpectrumCounts(metadata.spectrumCounts) || "unknown"}`);
     console.log(`   first seen: ${formatDate(candidate.first_seen_at)}`);
     console.log(`   last seen: ${formatDate(candidate.last_seen_at)}`);

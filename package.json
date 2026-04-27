@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "ingest:manual": "node --experimental-strip-types scripts/jobs/ingest-manual.ts",
     "analyze:manual": "node --experimental-strip-types scripts/jobs/analyze-manual.ts",
+    "enrich:manual": "node --experimental-strip-types scripts/jobs/enrich-manual.ts",
     "inspect:candidates": "node --experimental-strip-types scripts/jobs/inspect-candidates.ts",
     "candidates:reset": "node --experimental-strip-types scripts/jobs/reset-candidates.ts",
     "publish:manual": "node --experimental-strip-types scripts/jobs/publish-manual.ts",

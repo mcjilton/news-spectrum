@@ -75,6 +75,13 @@ npm run candidates:reset
 npm run analyze:manual
 ```
 
+Draft enrichment can be tested with the mock model provider before spending
+tokens:
+
+```bash
+npm run enrich:manual
+```
+
 ## Deployment Notes
 
 The public app is read-only. Readers can view generated analysis and source
