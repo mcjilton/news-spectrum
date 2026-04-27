@@ -60,6 +60,12 @@ npm run analyze:manual
 The current analysis job creates unpublished candidate events only. It does not
 run LLM analysis or expose new content to readers.
 
+Candidate quality can be inspected without writing data:
+
+```bash
+npm run inspect:candidates
+```
+
 ## Deployment Notes
 
 The public app is read-only. Readers can view generated analysis and source

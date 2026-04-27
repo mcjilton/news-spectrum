@@ -61,6 +61,7 @@ Manual scripts are intentionally local/private entrypoints:
 ```bash
 npm run ingest:manual
 npm run analyze:manual
+npm run inspect:candidates
 npm run publish:manual
 ```
 
@@ -74,6 +75,10 @@ candidate events. The first pass is deterministic title-token clustering: it
 does not scrape article bodies, publish events, create claims/frames, or call an
 LLM. Later analysis passes can enrich these candidates with LLM-generated facts
 and framing analysis before publication.
+
+`inspect:candidates` reads unpublished candidate events through the private
+service-role path and prints compact source/article details for quality review.
+It does not write data.
 
 `publish:manual` publishes already-prepared event analysis through the
 Supabase/RLS read path.
