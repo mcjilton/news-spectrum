@@ -62,23 +62,30 @@ Manual scripts are intentionally local/private entrypoints:
 npm run ingest:manual
 npm run analyze:manual
 npm run inspect:candidates
+npm run candidates:reset
 npm run publish:manual
 ```
 
 `ingest:manual` syncs the starter source catalog and imports recent article
 metadata from GDELT into Supabase. It does not create events, publish rows, or
 call an LLM. It requires `DATA_MODE=imported`, `SUPABASE_URL`, and
-`SUPABASE_SERVICE_ROLE_KEY`.
+`SUPABASE_SERVICE_ROLE_KEY`. Article URLs are canonicalized before storage so
+regional hosts and tracking parameters do not create duplicate candidates.
 
 `analyze:manual` clusters recent, unlinked article metadata into unpublished
 candidate events. The first pass is deterministic title-token clustering: it
 does not scrape article bodies, publish events, create claims/frames, or call an
-LLM. Later analysis passes can enrich these candidates with LLM-generated facts
-and framing analysis before publication.
+LLM. It deduplicates by canonical URL and same-source title keys, requires
+distinct source domains, and runs a merge pass for closely related candidates.
+Later analysis passes can enrich these candidates with LLM-generated facts and
+framing analysis before publication.
 
 `inspect:candidates` reads unpublished candidate events through the private
 service-role path and prints compact source/article details for quality review.
 It does not write data.
+
+`candidates:reset` deletes only unpublished candidate events where
+`metadata.candidate = true`. Published events are not touched.
 
 `publish:manual` publishes already-prepared event analysis through the
 Supabase/RLS read path.

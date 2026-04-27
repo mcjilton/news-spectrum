@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { runtimeConfig } from "../../lib/runtime-config.ts";
 import { sourceCatalog, type CatalogSource } from "../../lib/source-catalog.ts";
 import { createServiceSupabaseClient } from "../../lib/supabase/runtime.ts";
+import { safeCanonicalizeUrl } from "../../lib/url-utils.ts";
 import { assertManualIngestionEnabled, printJobBudget } from "./guards.ts";
 
 const GDELT_DOC_API_URL = "https://api.gdeltproject.org/api/v2/doc/doc";
@@ -179,15 +180,16 @@ function toArticleInsert(
 
   const seenAt = parseGdeltDate(article.seendate);
   const imageUrl = article.socialimage ?? article.image;
+  const canonicalUrl = safeCanonicalizeUrl(url);
 
   return {
     source_id: sourceId,
     url,
-    canonical_url: url,
+    canonical_url: canonicalUrl,
     title,
     published_at: seenAt,
     fetched_at: fetchedAt,
-    content_hash: contentHash(url),
+    content_hash: contentHash(canonicalUrl),
     metadata: {
       provider: "gdelt",
       providerDomain: article.domain ?? source.gdeltDomain,
@@ -238,7 +240,7 @@ async function main() {
       const row = toArticleInsert(source, sourceId, article, fetchedAt);
 
       if (row) {
-        articlesByUrl.set(row.url, row);
+        articlesByUrl.set(row.canonical_url, row);
       }
     }
 

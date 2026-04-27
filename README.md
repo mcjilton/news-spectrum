@@ -49,7 +49,8 @@ npm run ingest:manual
 ```
 
 The ingestion script imports source and article metadata only. It does not
-publish events or run model analysis.
+publish events or run model analysis. Imported URLs are canonicalized to reduce
+duplicate rows from regional hosts and tracking parameters.
 
 Private candidate clustering can be run after ingestion:
 
@@ -57,13 +58,21 @@ Private candidate clustering can be run after ingestion:
 npm run analyze:manual
 ```
 
-The current analysis job creates unpublished candidate events only. It does not
-run LLM analysis or expose new content to readers.
+The current analysis job creates unpublished candidate events only. It
+deduplicates article metadata, merges related clusters, and does not run LLM
+analysis or expose new content to readers.
 
 Candidate quality can be inspected without writing data:
 
 ```bash
 npm run inspect:candidates
+```
+
+Unpublished candidates can be rebuilt after clustering changes:
+
+```bash
+npm run candidates:reset
+npm run analyze:manual
 ```
 
 ## Deployment Notes

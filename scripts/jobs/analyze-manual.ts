@@ -2,15 +2,18 @@ import crypto from "node:crypto";
 
 import { runtimeConfig } from "../../lib/runtime-config.ts";
 import { createServiceSupabaseClient } from "../../lib/supabase/runtime.ts";
+import { normalizedUrlDomain, safeCanonicalizeUrl } from "../../lib/url-utils.ts";
 import { assertManualAnalysisEnabled, printJobBudget } from "./guards.ts";
 
-const PROMPT_VERSION = "cluster-title-token-v1";
+const PROMPT_VERSION = "cluster-canonical-merge-v1";
+const maxMergeWindowMs = 48 * 60 * 60 * 1000;
 
 type SourceSpectrum = "left" | "lean_left" | "center" | "lean_right" | "right" | "unknown";
 
 type SourceRow = {
   id: string;
   name: string;
+  homepage_url: string | null;
   spectrum: SourceSpectrum;
 };
 
@@ -18,6 +21,7 @@ type ArticleRow = {
   id: string;
   source_id: string;
   url: string;
+  canonical_url: string | null;
   title: string;
   published_at: string | null;
   fetched_at: string | null;
@@ -32,7 +36,9 @@ type EventRow = {
 type Cluster = {
   articleIds: Set<string>;
   sourceIds: Set<string>;
+  sourceDomains: Set<string>;
   tokens: Set<string>;
+  phraseTokens: Set<string>;
   articles: ArticleRow[];
 };
 
@@ -63,7 +69,10 @@ const stopWords = new Set([
   "of",
   "on",
   "over",
+  "photos",
+  "profile",
   "says",
+  "updates",
   "the",
   "their",
   "to",
@@ -72,24 +81,55 @@ const stopWords = new Set([
   "with",
 ]);
 
+const weakHeadlineTokens = new Set(["live", "map", "maps", "video", "visualizing", "watch"]);
+
 function getSource(article: ArticleRow) {
   return Array.isArray(article.sources) ? article.sources[0] : article.sources;
 }
 
 function normalizeToken(token: string) {
-  return token
+  const normalized = token
     .toLowerCase()
     .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "")
     .trim();
+
+  if (["shooting", "shooter"].includes(normalized)) {
+    return "shoot";
+  }
+
+  if (["suspected", "suspect"].includes(normalized)) {
+    return "suspect";
+  }
+
+  if (normalized.length > 4 && normalized.endsWith("s")) {
+    return normalized.slice(0, -1);
+  }
+
+  return normalized;
 }
 
 function titleTokens(title: string) {
-  return new Set(
-    title
-      .split(/\s+/)
-      .map(normalizeToken)
-      .filter((token) => token.length >= 3 && !stopWords.has(token)),
-  );
+  const tokens = title
+    .split(/\s+/)
+    .map(normalizeToken)
+    .filter(
+      (token) => token.length >= 3 && !stopWords.has(token) && !weakHeadlineTokens.has(token),
+    );
+
+  return new Set(tokens);
+}
+
+function titlePhraseTokens(title: string) {
+  const tokens = [...titleTokens(title)];
+  const phrases = new Set<string>();
+
+  for (let size = 2; size <= 4; size += 1) {
+    for (let index = 0; index <= tokens.length - size; index += 1) {
+      phrases.add(tokens.slice(index, index + size).join(" "));
+    }
+  }
+
+  return phrases;
 }
 
 function jaccard(left: Set<string>, right: Set<string>) {
@@ -107,26 +147,148 @@ function jaccard(left: Set<string>, right: Set<string>) {
   return intersection / (left.size + right.size - intersection);
 }
 
+function sharedTokenCount(left: Set<string>, right: Set<string>) {
+  let count = 0;
+
+  for (const token of left) {
+    if (right.has(token)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 function addArticle(cluster: Cluster, article: ArticleRow, tokens: Set<string>) {
   cluster.articleIds.add(article.id);
   cluster.sourceIds.add(article.source_id);
+  cluster.sourceDomains.add(articleSourceDomain(article));
   cluster.articles.push(article);
 
   for (const token of tokens) {
     cluster.tokens.add(token);
   }
+
+  for (const phrase of titlePhraseTokens(article.title)) {
+    cluster.phraseTokens.add(phrase);
+  }
 }
 
-function clusterArticles(articles: ArticleRow[]) {
+function articleSourceDomain(article: ArticleRow) {
+  const source = getSource(article);
+  return (
+    normalizedUrlDomain(source?.homepage_url ?? "") ||
+    normalizedUrlDomain(article.url) ||
+    article.source_id
+  );
+}
+
+function articleCanonicalKey(article: ArticleRow) {
+  return safeCanonicalizeUrl(article.canonical_url ?? article.url);
+}
+
+function dedupeArticles(articles: ArticleRow[]) {
+  const selected: ArticleRow[] = [];
+  const canonicalUrls = new Set<string>();
+  const sourceTitleKeys = new Set<string>();
+
+  for (const article of articles) {
+    const canonicalKey = articleCanonicalKey(article);
+    const sourceTitleKey = `${articleSourceDomain(article)}:${[...titleTokens(article.title)]
+      .sort()
+      .join(" ")}`;
+
+    if (canonicalUrls.has(canonicalKey) || sourceTitleKeys.has(sourceTitleKey)) {
+      continue;
+    }
+
+    canonicalUrls.add(canonicalKey);
+    sourceTitleKeys.add(sourceTitleKey);
+    selected.push(article);
+  }
+
+  return selected;
+}
+
+function clusterSimilarity(left: Cluster, right: Cluster) {
+  const tokenScore = jaccard(left.tokens, right.tokens);
+  const phraseScore = jaccard(left.phraseTokens, right.phraseTokens);
+  return tokenScore + phraseScore * 0.75;
+}
+
+function clustersOverlapInTime(left: Cluster, right: Cluster) {
+  const leftTimes = timespan(left);
+  const rightTimes = timespan(right);
+
+  if (!leftTimes.firstSeenAt || !rightTimes.firstSeenAt) {
+    return true;
+  }
+
+  const leftStart = new Date(leftTimes.firstSeenAt).getTime();
+  const leftEnd = new Date(leftTimes.lastSeenAt ?? leftTimes.firstSeenAt).getTime();
+  const rightStart = new Date(rightTimes.firstSeenAt).getTime();
+  const rightEnd = new Date(rightTimes.lastSeenAt ?? rightTimes.firstSeenAt).getTime();
+
+  if ([leftStart, leftEnd, rightStart, rightEnd].some(Number.isNaN)) {
+    return true;
+  }
+
+  return leftStart <= rightEnd + maxMergeWindowMs && rightStart <= leftEnd + maxMergeWindowMs;
+}
+
+function mergeCluster(target: Cluster, source: Cluster) {
+  for (const article of source.articles) {
+    addArticle(target, article, titleTokens(article.title));
+  }
+}
+
+function mergeRelatedClusters(clusters: Cluster[]) {
+  const merged = [...clusters];
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    for (let leftIndex = 0; leftIndex < merged.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < merged.length; rightIndex += 1) {
+        const left = merged[leftIndex];
+        const right = merged[rightIndex];
+
+        if (
+          left &&
+          right &&
+          clustersOverlapInTime(left, right) &&
+          (clusterSimilarity(left, right) >= runtimeConfig.clusterSimilarityThreshold ||
+            sharedTokenCount(left.tokens, right.tokens) >= 4)
+        ) {
+          mergeCluster(left, right);
+          merged.splice(rightIndex, 1);
+          changed = true;
+          break;
+        }
+      }
+
+      if (changed) {
+        break;
+      }
+    }
+  }
+
+  return merged;
+}
+
+function clusterArticles(inputArticles: ArticleRow[]) {
+  const articles = dedupeArticles(inputArticles);
   const clusters: Cluster[] = [];
 
   for (const article of articles) {
     const tokens = titleTokens(article.title);
+    const phrases = titlePhraseTokens(article.title);
     let bestCluster: Cluster | null = null;
     let bestScore = 0;
 
     for (const cluster of clusters) {
-      const score = jaccard(tokens, cluster.tokens);
+      const score = jaccard(tokens, cluster.tokens) + jaccard(phrases, cluster.phraseTokens) * 0.75;
 
       if (score > bestScore) {
         bestScore = score;
@@ -140,17 +302,19 @@ function clusterArticles(articles: ArticleRow[]) {
       clusters.push({
         articleIds: new Set([article.id]),
         sourceIds: new Set([article.source_id]),
+        sourceDomains: new Set([articleSourceDomain(article)]),
         tokens: new Set(tokens),
+        phraseTokens: new Set(phrases),
         articles: [article],
       });
     }
   }
 
-  return clusters
+  return mergeRelatedClusters(clusters)
     .filter(
       (cluster) =>
         cluster.articleIds.size >= runtimeConfig.minArticlesPerCluster &&
-        cluster.sourceIds.size >= runtimeConfig.minSourcesPerCluster,
+        cluster.sourceDomains.size >= runtimeConfig.minSourcesPerCluster,
     )
     .sort((left, right) => right.articleIds.size - left.articleIds.size)
     .slice(0, runtimeConfig.maxEventsPerRun);
@@ -162,7 +326,7 @@ function articleTime(article: ArticleRow) {
 
 function confidenceFor(cluster: Cluster) {
   const articleScore = Math.min(cluster.articleIds.size * 12, 48);
-  const sourceScore = Math.min(cluster.sourceIds.size * 14, 42);
+  const sourceScore = Math.min(cluster.sourceDomains.size * 14, 42);
   return Math.min(90, 20 + articleScore + sourceScore);
 }
 
@@ -232,7 +396,9 @@ async function fetchCandidateArticles(
 
   const { data, error } = await supabase
     .from("articles")
-    .select("id,source_id,url,title,published_at,fetched_at,sources(id,name,spectrum)")
+    .select(
+      "id,source_id,url,canonical_url,title,published_at,fetched_at,sources(id,name,homepage_url,spectrum)",
+    )
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("fetched_at", { ascending: false, nullsFirst: false })
     .limit(candidateLimit);
@@ -275,10 +441,11 @@ async function writeCandidateEvents(
         candidate: true,
         analysisStage: "clustered",
         clusteringMethod: PROMPT_VERSION,
-        sourceCount: cluster.sourceIds.size,
+        sourceCount: cluster.sourceDomains.size,
         articleCount: cluster.articleIds.size,
         sourceNames,
         spectrumCounts: spectrumCounts(cluster),
+        canonicalUrls: [...new Set(cluster.articles.map(articleCanonicalKey))],
         sharedFacts: [],
         disputedOrVariable: [],
       },
