@@ -89,6 +89,12 @@ Selected enriched candidates can be published manually:
 npm run publish:candidate -- <candidate-slug>
 ```
 
+Mock pipeline artifacts can be removed from Supabase with:
+
+```bash
+npm run mock:reset
+```
+
 ## Deployment Notes
 
 The public app is read-only. Readers can view generated analysis and source

@@ -15,6 +15,7 @@
     "inspect:candidates": "node --experimental-strip-types scripts/jobs/inspect-candidates.ts",
     "inspect:enriched": "node --experimental-strip-types scripts/jobs/inspect-enriched.ts",
     "candidates:reset": "node --experimental-strip-types scripts/jobs/reset-candidates.ts",
+    "mock:reset": "node --experimental-strip-types scripts/jobs/reset-mock.ts",
     "publish:candidate": "node --experimental-strip-types scripts/jobs/publish-candidate.ts",
     "publish:manual": "node --experimental-strip-types scripts/jobs/publish-manual.ts",
     "verify:imported": "node --experimental-strip-types scripts/jobs/verify-imported.ts"

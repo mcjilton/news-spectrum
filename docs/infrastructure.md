@@ -65,6 +65,7 @@ npm run enrich:manual
 npm run inspect:candidates
 npm run inspect:enriched
 npm run candidates:reset
+npm run mock:reset
 npm run publish:candidate -- <candidate-slug>
 npm run publish:manual
 ```
@@ -98,6 +99,10 @@ metadata. It does not write data.
 
 `candidates:reset` deletes only unpublished candidate events where
 `metadata.candidate = true`. Published events are not touched.
+
+`mock:reset` deletes only mock-published candidate events carrying the mock
+enrichment, manual publish, mock title, and mock analysis-run markers. It is a
+rollback lever for end-to-end pipeline tests and should not match real events.
 
 `publish:candidate` publishes exactly one enriched candidate by slug. It refuses
 to publish unless the event is unpublished, marked as a candidate, enriched, and
