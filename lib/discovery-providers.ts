@@ -99,7 +99,7 @@ export function parseGdeltDate(value: string | undefined) {
   return parseDate(value);
 }
 
-function parseDate(value: string | null) {
+export function parseDate(value: string | null) {
   if (!value) {
     return null;
   }
@@ -195,8 +195,8 @@ export async function fetchGdeltArticles(
     );
 }
 
-function parseRss(xml: string) {
-  return [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)]
+export function parseRss(xml: string) {
+  const rssItems = [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)]
     .map((match): RssItem | null => {
       const itemXml = match[1] ?? "";
       const title = tagContent(itemXml, "title") ?? "";
@@ -219,6 +219,35 @@ function parseRss(xml: string) {
       };
     })
     .filter((item): item is RssItem => Boolean(item));
+  const atomEntries = [...xml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry>/gi)]
+    .map((match): RssItem | null => {
+      const entryXml = match[1] ?? "";
+      const title = tagContent(entryXml, "title") ?? "";
+      const link =
+        tagAttribute(entryXml, "link", "href") ??
+        tagContent(entryXml, "link") ??
+        tagContent(entryXml, "id") ??
+        "";
+
+      if (!title || !link) {
+        return null;
+      }
+
+      return {
+        title,
+        link,
+        pubDate: tagContent(entryXml, "published") ?? tagContent(entryXml, "updated"),
+        description: tagContent(entryXml, "summary") ?? tagContent(entryXml, "content"),
+        sourceName: null,
+        sourceUrl: null,
+        imageUrl:
+          tagAttribute(entryXml, "media:content", "url") ??
+          tagAttribute(entryXml, "media:thumbnail", "url"),
+      };
+    })
+    .filter((item): item is RssItem => Boolean(item));
+
+  return [...rssItems, ...atomEntries];
 }
 
 export async function fetchSourceRssArticles(

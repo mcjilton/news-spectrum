@@ -144,6 +144,11 @@ async function main() {
   const querySources = enabledSources.slice(0, runtimeConfig.maxDiscoveryQueriesPerRun);
   const fetchedAt = new Date().toISOString();
   const articlesByUrl = new Map<string, ArticleInsert>();
+  const providerCounts: Record<DiscoveredArticle["provider"], number> = {
+    gdelt: 0,
+    rss: 0,
+    "rss-aggregator": 0,
+  };
   let queriesRun = 0;
   let failedQueries = 0;
   let discoveredArticles = 0;
@@ -164,6 +169,7 @@ async function main() {
 
       queriesRun += 1;
       discoveredArticles += feedArticles.length;
+      providerCounts["rss-aggregator"] += feedArticles.length;
       console.log(`- provider articles: ${feedArticles.length}`);
 
       for (const { source, article } of feedArticles) {
@@ -205,19 +211,23 @@ async function main() {
           return [];
         })
       : [];
-    const gdeltArticles = await fetchGdeltArticles(
-      source,
-      runtimeConfig.maxArticlesPerDiscoveryQuery,
-    ).catch((error: unknown) => {
-      failedQueries += 1;
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`Skipped GDELT for ${source.name}: ${message}`);
-      return [];
-    });
+    const gdeltArticles = runtimeConfig.enableGdeltDiscovery
+      ? await fetchGdeltArticles(
+          source,
+          runtimeConfig.maxArticlesPerDiscoveryQuery,
+        ).catch((error: unknown) => {
+          failedQueries += 1;
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(`Skipped GDELT for ${source.name}: ${message}`);
+          return [];
+        })
+      : [];
     const articles = [...rssArticles, ...gdeltArticles];
 
     queriesRun += 1;
     discoveredArticles += articles.length;
+    providerCounts.rss += rssArticles.length;
+    providerCounts.gdelt += gdeltArticles.length;
     console.log(
       `- provider articles: ${articles.length} (rss: ${rssArticles.length}; gdelt: ${gdeltArticles.length})`,
     );
@@ -253,6 +263,7 @@ async function main() {
   console.log(`Discovery queries run: ${queriesRun}`);
   console.log(`Discovery queries skipped after provider errors: ${failedQueries}`);
   console.log(`Provider articles discovered: ${discoveredArticles}`);
+  console.log(`Provider article counts: ${JSON.stringify(providerCounts)}`);
   console.log(`Article metadata rows upserted: ${articleRows.length}`);
   console.log("No events were created or published.");
 }

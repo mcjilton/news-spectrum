@@ -104,6 +104,14 @@ measured extraction yield by source.
 RSS discovery is controlled by the non-secret `ENABLE_RSS_DISCOVERY` flag and
 `MAX_AGGREGATOR_FEED_ITEMS_PER_RUN` cap. Keep these conservative while tuning
 feed quality and source attribution.
+Run `npm run sources:probe-rss` after catalog feed edits. It writes
+`reports/rss-feed-probe.json` with item counts, 24/72-hour freshness, failure
+reasons, and sample titles. The current initial feed set intentionally includes
+only feeds that validated as fresh in the probe.
+Discovery providers can be compared with the non-secret switches
+`ENABLE_RSS_DISCOVERY` and `ENABLE_GDELT_DISCOVERY`. Use matching caps when
+comparing RSS-only, GDELT-only, and combined runs; ingestion still writes only
+article metadata and does not create events, publish rows, or call an LLM.
 
 `analyze:manual` clusters recent, unlinked article metadata into unpublished
 candidate events. The first pass is deterministic title-token clustering: it

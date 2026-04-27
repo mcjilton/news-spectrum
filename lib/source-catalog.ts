@@ -48,6 +48,7 @@ export const sourceCatalog: CatalogSource[] = [
     ratingSource: "starter-catalog",
     accessProfile: "open",
     gdeltDomain: "npr.org",
+    rssFeedUrls: ["https://feeds.npr.org/1014/rss.xml"],
     enabled: true,
   },
   {
@@ -120,6 +121,7 @@ export const sourceCatalog: CatalogSource[] = [
     ratingSource: "starter-catalog",
     accessProfile: "open",
     gdeltDomain: "thehill.com",
+    rssFeedUrls: ["https://thehill.com/feed/"],
     enabled: true,
   },
   {
@@ -228,6 +230,7 @@ export const sourceCatalog: CatalogSource[] = [
     ratingSource: "starter-catalog",
     accessProfile: "open",
     gdeltDomain: "texastribune.org",
+    rssFeedUrls: ["https://www.texastribune.org/feeds/main/"],
     enabled: true,
   },
   {
@@ -265,6 +268,7 @@ export const sourceCatalog: CatalogSource[] = [
     ratingUrl: "https://www.allsides.com/news-source/propublica-media-bias",
     accessProfile: "open",
     gdeltDomain: "propublica.org",
+    rssFeedUrls: ["https://www.propublica.org/feeds/propublica/main"],
     enabled: true,
   },
   {
@@ -289,6 +293,7 @@ export const sourceCatalog: CatalogSource[] = [
     ratingSource: "starter-catalog",
     accessProfile: "unknown",
     gdeltDomain: "reason.com",
+    rssFeedUrls: ["https://reason.com/feed/"],
     enabled: true,
   },
   {
@@ -315,6 +320,7 @@ export const sourceCatalog: CatalogSource[] = [
     ratingUrl: "https://www.allsides.com/news-source/heritage-foundation-media-bias",
     accessProfile: "open",
     gdeltDomain: "heritage.org",
+    rssFeedUrls: ["https://www.heritage.org/rss"],
     enabled: true,
   },
   {
@@ -393,6 +399,7 @@ export const sourceCatalog: CatalogSource[] = [
     ratingUrl: "https://www.allsides.com/news-source/kaiser-family-foundation-media-bias",
     accessProfile: "open",
     gdeltDomain: "kff.org",
+    rssFeedUrls: ["https://www.kff.org/feed/"],
     enabled: true,
   },
   {

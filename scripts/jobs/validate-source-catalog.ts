@@ -52,10 +52,13 @@ const byAccessProfile = Object.groupBy(enabledSources, (source) => source.access
 const bySourceType = Object.groupBy(enabledSources, (source) => source.sourceType);
 const bySpectrum = Object.groupBy(enabledSources, (source) => source.spectrum);
 const withRatingUrls = enabledSources.filter((source) => source.ratingUrl).length;
+const withRssFeeds = enabledSources.filter((source) => (source.rssFeedUrls ?? []).length > 0).length;
+const rssFeedCount = enabledSources.reduce((count, source) => count + (source.rssFeedUrls ?? []).length, 0);
 
 console.log("Source catalog validated.");
 console.log(`- enabled sources: ${enabledSources.length}`);
 console.log(`- with third-party rating URLs: ${withRatingUrls}`);
+console.log(`- with RSS feeds: ${withRssFeeds} sources / ${rssFeedCount} feeds`);
 console.log(
   `- by access: ${JSON.stringify(
     Object.fromEntries(Object.entries(byAccessProfile).map(([key, values]) => [key, values?.length ?? 0])),
