@@ -85,6 +85,17 @@ function coerceTextList(value: unknown) {
     : [];
 }
 
+function isGenericFact(value: string) {
+  return [
+    /multiple sources/i,
+    /multiple (news )?outlets/i,
+    /article metadata/i,
+    /published coverage/i,
+    /candidate event/i,
+    /source material/i,
+  ].some((pattern) => pattern.test(value));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -123,6 +134,9 @@ function fallbackFrames(articles: ArticleRow[]): EnrichmentFrame[] {
 function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, articles: ArticleRow[]) {
   const fallbackFacts = ["Multiple sources published article metadata for this candidate event."];
   const frames = Array.isArray(value.frames) && value.frames.length > 0 ? value.frames : fallbackFrames(articles);
+  const concreteSharedFacts = coerceTextList(value.sharedFacts)
+    .filter((fact) => !isGenericFact(fact))
+    .slice(0, 6);
 
   return {
     title: typeof value.title === "string" && value.title.trim() ? value.title.trim() : candidate.title,
@@ -132,7 +146,7 @@ function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, ar
         : "Draft enrichment summary unavailable.",
     confidence: clampScore(value.confidence),
     divergence: clampScore(value.divergence),
-    sharedFacts: coerceTextList(value.sharedFacts).slice(0, 8),
+    sharedFacts: concreteSharedFacts,
     disputedOrVariable: coerceTextList(value.disputedOrVariable).slice(0, 8),
     frames: frames.slice(0, 3).map((frame) => ({
       bucket: frame.bucket,
@@ -140,9 +154,9 @@ function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, ar
       summary: frame.summary || "Draft framing summary unavailable.",
       emphasis: coerceTextList(frame.emphasis).slice(0, 8),
       loadedLanguage: coerceTextList(frame.loadedLanguage).slice(0, 8),
-      sourceArticleIds: coerceTextList(frame.sourceArticleIds).filter((articleId) =>
-        articles.some((article) => article.id === articleId),
-      ),
+      sourceArticleIds: articles
+        .filter((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown") === frame.bucket)
+        .map((article) => article.id),
     })),
     fallbackFacts,
   };
@@ -150,15 +164,8 @@ function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, ar
 
 function validateEnrichment(value: unknown, articles: ArticleRow[]) {
   const errors: string[] = [];
-  const articleIds = articles.map((article) => article.id);
   const representedBuckets = new Set(
     articles.map((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown")),
-  );
-  const articleBucketById = new Map(
-    articles.map((article) => [
-      article.id,
-      bucketForSpectrum(getSource(article)?.spectrum ?? "unknown"),
-    ]),
   );
 
   if (!isRecord(value)) {
@@ -184,25 +191,12 @@ function validateEnrichment(value: unknown, articles: ArticleRow[]) {
   }
 
   if (Array.isArray(value.sharedFacts)) {
-    if (value.sharedFacts.length < 3 || value.sharedFacts.length > 6) {
-      errors.push("sharedFacts must contain 3 to 6 concrete facts");
-    }
+    const concreteFacts = value.sharedFacts.filter(
+      (fact) => typeof fact === "string" && !isGenericFact(fact),
+    );
 
-    const genericFactPatterns = [
-      /multiple sources/i,
-      /article metadata/i,
-      /published coverage/i,
-      /candidate event/i,
-      /source material/i,
-    ];
-
-    for (const [index, fact] of value.sharedFacts.entries()) {
-      if (
-        typeof fact === "string" &&
-        genericFactPatterns.some((pattern) => pattern.test(fact))
-      ) {
-        errors.push(`sharedFacts[${index}] is too generic`);
-      }
+    if (concreteFacts.length < 3 || concreteFacts.length > 6) {
+      errors.push("sharedFacts must include 3 to 6 concrete non-generic facts");
     }
   }
 
@@ -210,7 +204,6 @@ function validateEnrichment(value: unknown, articles: ArticleRow[]) {
     errors.push("frames must be an array");
   } else {
     const allowedBuckets = new Set(["left", "center", "right"]);
-    const allowedArticleIds = new Set(articleIds);
 
     for (const [index, frame] of value.frames.entries()) {
       if (!isRecord(frame)) {
@@ -235,24 +228,6 @@ function validateEnrichment(value: unknown, articles: ArticleRow[]) {
           errors.push(`frames[${index}].${key} must be an array of strings`);
         }
       }
-
-      if (
-        Array.isArray(frame.sourceArticleIds) &&
-        frame.sourceArticleIds.some((articleId) => !allowedArticleIds.has(String(articleId)))
-      ) {
-        errors.push(`frames[${index}].sourceArticleIds contains unknown article ids`);
-      }
-
-      if (
-        typeof frame.bucket === "string" &&
-        allowedBuckets.has(frame.bucket) &&
-        Array.isArray(frame.sourceArticleIds) &&
-        frame.sourceArticleIds.some(
-          (articleId) => articleBucketById.get(String(articleId)) !== frame.bucket,
-        )
-      ) {
-        errors.push(`frames[${index}].sourceArticleIds must match the frame bucket`);
-      }
     }
   }
 
@@ -265,6 +240,14 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
       articles.map((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown")),
     ),
   ];
+  const articleIdsByBucket = Object.fromEntries(
+    representedBuckets.map((bucket) => [
+      bucket,
+      articles
+        .filter((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown") === bucket)
+        .map((article) => article.id),
+    ]),
+  );
   const payload = {
     candidate: {
       slug: candidate.slug,
@@ -286,6 +269,7 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
     }),
     instructions: {
       goal: "Produce draft event analysis from article metadata only.",
+      allowedSourceArticleIdsByFrameBucket: articleIdsByBucket,
       constraints: [
         "Do not claim certainty beyond the provided article metadata.",
         "Do not quote article text.",
@@ -296,7 +280,7 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
         "If a bucket has no sources, omit that frame entirely.",
         "loadedLanguage means notable framing terms or charged wording from titles/metadata, not the human language of the article.",
         "Each frame summary must explicitly reflect the available source mix and should not invent coverage from absent buckets.",
-        "sourceArticleIds must only contain article ids provided in this prompt and should match the frame bucket where possible.",
+        "sourceArticleIds may be empty; the system will attach same-bucket source articles after validation.",
         "Return JSON matching the requested schema.",
       ],
     },
