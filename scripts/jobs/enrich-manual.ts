@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { getRuntimeModelProvider } from "../../lib/ai/runtime-provider.ts";
 import { runtimeConfig } from "../../lib/runtime-config.ts";
 import { createServiceSupabaseClient } from "../../lib/supabase/runtime.ts";
-import { assertManualAnalysisEnabled, printJobBudget } from "./guards.ts";
+import { assertManualAnalysisEnabled, assertPrivateJobsEnabled, printJobBudget } from "./guards.ts";
 
 const PROMPT_VERSION = "event-enrichment-v1";
 
@@ -53,6 +53,16 @@ type EventEnrichment = {
   frames: EnrichmentFrame[];
 };
 
+type EnrichOptions = {
+  dryRun: boolean;
+};
+
+function parseOptions(): EnrichOptions {
+  return {
+    dryRun: process.argv.includes("--dry-run"),
+  };
+}
+
 function getArticle(link: CandidateRow["event_articles"][number]) {
   return Array.isArray(link.articles) ? link.articles[0] : link.articles;
 }
@@ -73,6 +83,10 @@ function coerceTextList(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     : [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function bucketForSpectrum(spectrum: SourceSpectrum): SpectrumBucket {
@@ -128,6 +142,71 @@ function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, ar
     })),
     fallbackFacts,
   };
+}
+
+function validateEnrichment(value: unknown, articleIds: string[]) {
+  const errors: string[] = [];
+
+  if (!isRecord(value)) {
+    return ["enrichment must be an object"];
+  }
+
+  for (const key of ["title", "summary"] as const) {
+    if (typeof value[key] !== "string" || !value[key].trim()) {
+      errors.push(`${key} must be a non-empty string`);
+    }
+  }
+
+  for (const key of ["confidence", "divergence"] as const) {
+    if (typeof value[key] !== "number" || value[key] < 0 || value[key] > 100) {
+      errors.push(`${key} must be a number between 0 and 100`);
+    }
+  }
+
+  for (const key of ["sharedFacts", "disputedOrVariable"] as const) {
+    if (!Array.isArray(value[key]) || !value[key].every((item) => typeof item === "string")) {
+      errors.push(`${key} must be an array of strings`);
+    }
+  }
+
+  if (!Array.isArray(value.frames)) {
+    errors.push("frames must be an array");
+  } else {
+    const allowedBuckets = new Set(["left", "center", "right"]);
+    const allowedArticleIds = new Set(articleIds);
+
+    for (const [index, frame] of value.frames.entries()) {
+      if (!isRecord(frame)) {
+        errors.push(`frames[${index}] must be an object`);
+        continue;
+      }
+
+      if (typeof frame.bucket !== "string" || !allowedBuckets.has(frame.bucket)) {
+        errors.push(`frames[${index}].bucket must be left, center, or right`);
+      }
+
+      for (const key of ["label", "summary"] as const) {
+        if (typeof frame[key] !== "string" || !frame[key].trim()) {
+          errors.push(`frames[${index}].${key} must be a non-empty string`);
+        }
+      }
+
+      for (const key of ["emphasis", "language", "sourceArticleIds"] as const) {
+        if (!Array.isArray(frame[key]) || !frame[key].every((item) => typeof item === "string")) {
+          errors.push(`frames[${index}].${key} must be an array of strings`);
+        }
+      }
+
+      if (
+        Array.isArray(frame.sourceArticleIds) &&
+        frame.sourceArticleIds.some((articleId) => !allowedArticleIds.has(String(articleId)))
+      ) {
+        errors.push(`frames[${index}].sourceArticleIds contains unknown article ids`);
+      }
+    }
+  }
+
+  return errors;
 }
 
 function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
@@ -322,14 +401,36 @@ async function writeAnalysisRun(
 
 async function main() {
   assertManualAnalysisEnabled("enrich:manual");
+  const options = parseOptions();
+
+  if (runtimeConfig.modelProvider !== "mock") {
+    assertPrivateJobsEnabled("enrich:manual");
+
+    if (runtimeConfig.llmEstimatedCostUsdPerCall <= 0) {
+      throw new Error(
+        "enrich:manual blocked: LLM_ESTIMATED_COST_USD_PER_CALL must be set above 0 before live model calls.",
+      );
+    }
+  }
+
   printJobBudget();
 
   const supabase = createServiceSupabaseClient();
   const provider = getRuntimeModelProvider();
-  const candidates = await fetchCandidates(supabase);
+  const candidates = (await fetchCandidates(supabase)).slice(
+    0,
+    runtimeConfig.modelProvider === "mock" ? runtimeConfig.maxEventsPerRun : 1,
+  );
   let enrichedCount = 0;
+  let modelCalls = 0;
+  let estimatedCostUsd = 0;
 
   for (const candidate of candidates) {
+    if (modelCalls >= runtimeConfig.maxLlmCallsPerRun) {
+      console.log("Stopped before candidate: max LLM calls per run reached.");
+      break;
+    }
+
     const articles = candidate.event_articles
       .map(getArticle)
       .filter((article): article is ArticleRow => Boolean(article))
@@ -340,18 +441,46 @@ async function main() {
       continue;
     }
 
+    const runEstimatedCostUsd =
+      runtimeConfig.modelProvider === "mock" ? 0 : runtimeConfig.llmEstimatedCostUsdPerCall;
+
+    if (estimatedCostUsd + runEstimatedCostUsd > runtimeConfig.maxLlmEstimatedCostUsdPerRun) {
+      throw new Error(
+        `Estimated LLM cost cap would be exceeded before next call: ${
+          estimatedCostUsd + runEstimatedCostUsd
+        } > ${runtimeConfig.maxLlmEstimatedCostUsdPerRun}`,
+      );
+    }
+
+    modelCalls += 1;
     const result = await provider.generateJson<EventEnrichment>({
       task: "summarizeEvent",
       schemaName: PROMPT_VERSION,
       prompt: buildPrompt(candidate, articles),
       sourceIds: articleIds,
     });
+    estimatedCostUsd += runEstimatedCostUsd;
+
+    const validationErrors = validateEnrichment(result.json, articleIds);
+
+    if (validationErrors.length > 0) {
+      throw new Error(`Enrichment validation failed: ${validationErrors.join("; ")}`);
+    }
+
     const enrichment = normalizeEnrichment(result.json, candidate, articles);
+
+    if (options.dryRun) {
+      console.log(`Dry-run validated candidate: ${candidate.slug}`);
+      continue;
+    }
 
     await updateEvent(supabase, candidate, enrichment);
     await replaceClaims(supabase, candidate.id, articleIds, enrichment);
     await replaceFrames(supabase, candidate.id, enrichment);
-    await writeAnalysisRun(supabase, candidate, articleIds, result.metadata);
+    await writeAnalysisRun(supabase, candidate, articleIds, {
+      ...result.metadata,
+      estimatedCostUsd: runEstimatedCostUsd,
+    });
 
     enrichedCount += 1;
     console.log(`Enriched unpublished candidate: ${candidate.slug}`);
@@ -359,6 +488,9 @@ async function main() {
 
   console.log(`Candidates read: ${candidates.length}`);
   console.log(`Candidates enriched: ${enrichedCount}`);
+  console.log(`Model calls made: ${modelCalls}`);
+  console.log(`Estimated model cost: $${estimatedCostUsd}`);
+  console.log(`Dry run: ${options.dryRun ? "yes" : "no"}`);
   console.log("No events were published.");
 }
 

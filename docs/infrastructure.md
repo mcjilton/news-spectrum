@@ -87,7 +87,15 @@ framing analysis before publication.
 `enrich:manual` selects unpublished clustered candidates and writes draft event
 analysis, claims, and frames while keeping `is_published = false`. It should be
 run with `MODEL_PROVIDER=mock` until the data flow has been verified; the mock
-provider returns structured zero-cost output.
+provider returns structured zero-cost output. Use `npm run enrich:manual --
+--dry-run` to call the configured provider and validate structured output
+without writing Supabase changes.
+
+Live OpenAI enrichment is fail-closed: it requires `MODEL_PROVIDER=openai`,
+`OPENAI_API_KEY`, a real `MODEL_SUMMARY`, `DISABLE_LIVE_ANALYSIS=false`, and a
+positive `LLM_ESTIMATED_COST_USD_PER_CALL`. Non-mock enrichment is limited to
+one candidate per run initially and checks the configured estimated-cost cap
+before each model call.
 
 `inspect:candidates` reads unpublished candidate events through the private
 service-role path and prints compact source/article details for quality review.
@@ -116,4 +124,5 @@ All manual jobs are capped by environment variables such as
 `MAX_ARTICLES_PER_INGEST_RUN`, `MAX_EVENTS_PER_RUN`,
 `MAX_ARTICLES_PER_EVENT`, `MIN_ARTICLES_PER_CLUSTER`,
 `MIN_SOURCES_PER_CLUSTER`, `CLUSTER_SIMILARITY_THRESHOLD`, and
-`MAX_LLM_CALLS_PER_RUN`.
+`MAX_LLM_CALLS_PER_RUN`, `MAX_LLM_ESTIMATED_COST_USD_PER_RUN`, and
+`LLM_ESTIMATED_COST_USD_PER_CALL`.

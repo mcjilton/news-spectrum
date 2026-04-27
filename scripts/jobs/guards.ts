@@ -70,4 +70,5 @@ export function printJobBudget() {
   console.log(
     `- max estimated LLM cost per run: $${runtimeConfig.maxLlmEstimatedCostUsdPerRun}`,
   );
+  console.log(`- estimated LLM cost per call: $${runtimeConfig.llmEstimatedCostUsdPerCall}`);
 }
