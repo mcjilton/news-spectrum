@@ -106,15 +106,15 @@ button {
 }
 
 .heroCopy {
-  max-width: 980px;
+  max-width: 100%;
 }
 
 .hero .heroCopy h1 {
-  max-width: 980px;
+  max-width: 1120px;
 }
 
 .hero .lede {
-  max-width: 920px;
+  max-width: 1120px;
 }
 
 .detailHero h1 {

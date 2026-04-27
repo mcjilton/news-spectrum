@@ -50,10 +50,11 @@ export default async function HomePage() {
           <p className="eyebrow">Prototype workspace</p>
           <h1>Compare the facts everyone cites with the spin each side adds.</h1>
           <p className="lede">
-            A source-linked briefing surface for seeing how far apart coverage can
-            drift around the same events. The goal is to make competing frames
-            plain, expose echo-chamber distance, and support more civil,
-            productive discourse over entrenched one-sided thinking.
+            A data-driven and source-linked briefing designed to highlight just
+            how far apart coverage can drift around the same events. Our goal is
+            to make competing frames plain, expose echo-chamber distance, and
+            support more civil, productive discourse in the place of entrenched,
+            one-sided thinking.
           </p>
         </div>
       </section>
