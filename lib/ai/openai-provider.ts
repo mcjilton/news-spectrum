@@ -51,6 +51,19 @@ const eventEnrichmentSchema = {
   },
 } as const;
 
+const clusterMergeDecisionSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["sameEvent", "confidence", "reason", "canonicalTitle", "mergeStrategy"],
+  properties: {
+    sameEvent: { type: "boolean" },
+    confidence: { type: "integer", minimum: 0, maximum: 100 },
+    reason: { type: "string" },
+    canonicalTitle: { type: "string" },
+    mergeStrategy: { type: "string", enum: ["merge", "keep_separate"] },
+  },
+} as const;
+
 function metadata(task: ModelTask, sourceIds: string[] = []): ModelRunMetadata {
   return {
     provider: "openai",
@@ -73,6 +86,10 @@ function client() {
 function schemaForName(schemaName: string) {
   if (schemaName === "event-enrichment-v1") {
     return eventEnrichmentSchema;
+  }
+
+  if (schemaName === "cluster-merge-decision-v1") {
+    return clusterMergeDecisionSchema;
   }
 
   throw new Error(`No OpenAI JSON schema registered for ${schemaName}.`);

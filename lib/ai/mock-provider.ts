@@ -31,6 +31,19 @@ export const mockProvider = {
   },
 
   async generateJson<T>(input: GenerateJsonInput): Promise<JsonModelResult<T>> {
+    if (input.schemaName === "cluster-merge-decision-v1") {
+      return {
+        json: {
+          sameEvent: true,
+          confidence: 90,
+          reason: "Mock merge decision for validating the merge adjudication harness.",
+          canonicalTitle: "Mock merged candidate event",
+          mergeStrategy: "merge",
+        } as T,
+        metadata: metadata(input.task, input.sourceIds),
+      };
+    }
+
     if (input.schemaName === "event-enrichment-v1") {
       return {
         json: {

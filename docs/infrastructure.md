@@ -61,6 +61,7 @@ Manual scripts are intentionally local/private entrypoints:
 ```bash
 npm run ingest:manual
 npm run analyze:manual
+npm run merge:manual -- --dry-run
 npm run enrich:manual
 npm run inspect:candidates
 npm run inspect:enriched
@@ -83,6 +84,11 @@ LLM. It deduplicates by canonical URL and same-source title keys, requires
 distinct source domains, and runs a merge pass for closely related candidates.
 Later analysis passes can enrich these candidates with LLM-generated facts and
 framing analysis before publication.
+
+`merge:manual` uses the configured model as a bounded adjudicator for borderline
+candidate pairs. Dry-run mode reports structured merge decisions without writes;
+write mode rewires article links and deletes only the merged-away unpublished
+candidate.
 
 `enrich:manual` selects unpublished clustered candidates and writes draft event
 analysis, claims, and frames while keeping `is_published = false`. It should be

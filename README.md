@@ -76,6 +76,12 @@ npm run candidates:reset
 npm run analyze:manual
 ```
 
+Borderline candidate clusters can be adjudicated by the configured model:
+
+```bash
+npm run merge:manual -- --dry-run
+```
+
 Draft enrichment can be tested with the mock model provider before spending
 tokens:
 
