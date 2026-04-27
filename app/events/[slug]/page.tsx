@@ -21,6 +21,14 @@ import {
 
 const buckets: SpectrumBucket[] = ["left", "center", "right"];
 
+const bucketOrder = new Map<SpectrumBucket, number>(
+  buckets.map((bucket, index) => [bucket, index]),
+);
+
+function compareBuckets(a: SpectrumBucket, b: SpectrumBucket) {
+  return (bucketOrder.get(a) ?? buckets.length) - (bucketOrder.get(b) ?? buckets.length);
+}
+
 export const revalidate = 300;
 
 export function generateStaticParams() {
@@ -46,7 +54,6 @@ export default async function EventPage({
           <ArrowLeft size={18} aria-hidden="true" />
           Events
         </Link>
-        <span className="prototypeBadge">Seeded prototype analysis</span>
       </header>
 
       <section className="detailHero">
@@ -93,7 +100,7 @@ export default async function EventPage({
         <article className="analysisBlock">
           <div className="sectionTitle">
             <BadgeCheck size={20} aria-hidden="true" />
-            <h2>Core Facts</h2>
+            <h2>Shared Consensus</h2>
           </div>
           <ul className="factList">
             {event.sharedFacts.map((fact) => (
@@ -121,7 +128,7 @@ export default async function EventPage({
           <h2>How The Story Shifts</h2>
         </div>
         <div className="compareGrid">
-          {event.spectrum.map((analysis) => (
+          {[...event.spectrum].sort((a, b) => compareBuckets(a.bucket, b.bucket)).map((analysis) => (
             <article className={`compareCard ${bucketClasses[analysis.bucket]}`} key={analysis.bucket}>
               <p className="bucketLabel">{bucketLabels[analysis.bucket]}</p>
               <h3>{analysis.label}</h3>
@@ -145,7 +152,7 @@ export default async function EventPage({
           <ExternalLink size={20} aria-hidden="true" />
           <h2>Original Sources</h2>
         </div>
-        {buckets.map((bucket) => (
+        {[...buckets].sort(compareBuckets).map((bucket) => (
           <div className="sourceBucket" key={bucket}>
             <h3>{bucketLabels[bucket]}</h3>
             <div className="sourceTable">
@@ -166,12 +173,11 @@ export default async function EventPage({
       </section>
 
       <section className="methodNote">
-        <h2>Prototype Method Note</h2>
+        <h2>Method Note</h2>
         <p>
-          This screen uses seeded data to validate the product shape. In the live
-          pipeline, event clusters, claim extraction, source labels, and framing
-          summaries will be generated algorithmically and stored with audit
-          metadata. Article links remain the primary path for verification.
+          This screen uses algorithmic clustering, evidence extraction, and
+          model-generated analysis to summarize how outlets frame the same event.
+          Article links remain the primary path for verification.
         </p>
       </section>
     </main>
