@@ -53,8 +53,9 @@ export const mockProvider = {
           confidence: 70,
           divergence: 40,
           sharedFacts: [
-            "Multiple outlets have published coverage about the same candidate event.",
-            "The candidate event has not been reviewed for publication.",
+            "A mock incident occurred during a public political gathering.",
+            "Mock source metadata describes official responses after the incident.",
+            "Mock source metadata describes questions about event security.",
           ],
           disputedOrVariable: [
             "Mock output cannot assess real framing differences until a live provider is enabled.",

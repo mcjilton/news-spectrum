@@ -82,6 +82,17 @@ Borderline candidate clusters can be adjudicated by the configured model:
 npm run merge:manual -- --dry-run
 ```
 
+Private article evidence snippets can be extracted for unpublished candidates:
+
+```bash
+npm run extract:evidence -- --dry-run
+npm run extract:evidence
+```
+
+Evidence snippets are stored outside the public article table and are used only
+by private analysis jobs. They are bounded by runtime caps and are not
+reader-facing source republishing.
+
 Draft enrichment can be tested with the mock model provider before spending
 tokens:
 

@@ -12,6 +12,7 @@
     "ingest:manual": "node --experimental-strip-types scripts/jobs/ingest-manual.ts",
     "analyze:manual": "node --experimental-strip-types scripts/jobs/analyze-manual.ts",
     "merge:manual": "node --experimental-strip-types scripts/jobs/merge-manual.ts",
+    "extract:evidence": "node --experimental-strip-types scripts/jobs/extract-evidence-manual.ts",
     "enrich:manual": "node --experimental-strip-types scripts/jobs/enrich-manual.ts",
     "inspect:candidates": "node --experimental-strip-types scripts/jobs/inspect-candidates.ts",
     "inspect:enriched": "node --experimental-strip-types scripts/jobs/inspect-enriched.ts",

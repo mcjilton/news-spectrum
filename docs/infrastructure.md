@@ -62,6 +62,7 @@ Manual scripts are intentionally local/private entrypoints:
 npm run ingest:manual
 npm run analyze:manual
 npm run merge:manual -- --dry-run
+npm run extract:evidence -- --dry-run
 npm run enrich:manual
 npm run inspect:candidates
 npm run inspect:enriched
@@ -89,6 +90,12 @@ framing analysis before publication.
 candidate pairs. Dry-run mode reports structured merge decisions without writes;
 write mode rewires article links and deletes only the merged-away unpublished
 candidate.
+
+`extract:evidence` fetches article pages for unpublished candidates and stores
+bounded evidence snippets in the private `article_evidence` table. That table
+has RLS enabled and no public read policy, so snippets can guide enrichment
+without being republished to readers. Use `--refresh` only when existing
+snippets should be replaced.
 
 `enrich:manual` selects unpublished clustered candidates and writes draft event
 analysis, claims, and frames while keeping `is_published = false`. It should be

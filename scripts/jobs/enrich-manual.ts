@@ -22,6 +22,14 @@ type ArticleRow = {
   published_at: string | null;
   fetched_at: string | null;
   sources: SourceRow | SourceRow[] | null;
+  article_evidence: EvidenceRow | EvidenceRow[] | null;
+};
+
+type EvidenceRow = {
+  extraction_status: string;
+  evidence_text: string | null;
+  evidence_char_count: number;
+  extracted_at: string | null;
 };
 
 type CandidateRow = {
@@ -71,6 +79,29 @@ function getArticle(link: CandidateRow["event_articles"][number]) {
 
 function getSource(article: ArticleRow) {
   return Array.isArray(article.sources) ? article.sources[0] : article.sources;
+}
+
+function getEvidence(article: ArticleRow) {
+  return Array.isArray(article.article_evidence)
+    ? article.article_evidence[0]
+    : article.article_evidence;
+}
+
+function cappedEvidenceText(article: ArticleRow, remainingChars: number) {
+  const evidence = getEvidence(article);
+
+  if (
+    evidence?.extraction_status !== "succeeded" ||
+    !evidence.evidence_text ||
+    remainingChars <= 0
+  ) {
+    return "";
+  }
+
+  return evidence.evidence_text.slice(
+    0,
+    Math.min(runtimeConfig.maxEvidenceCharsPerArticle, remainingChars),
+  );
 }
 
 function clampScore(value: number) {
@@ -250,33 +281,42 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
         .map((article) => article.id),
     ]),
   );
+  let remainingEvidenceChars = runtimeConfig.maxEvidenceCharsPerEvent;
+  const promptArticles = articles.map((article) => {
+    const source = getSource(article);
+    const evidenceSnippet = cappedEvidenceText(article, remainingEvidenceChars);
+    remainingEvidenceChars -= evidenceSnippet.length;
+
+    return {
+      id: article.id,
+      title: article.title,
+      outlet: source?.name ?? "Unknown source",
+      spectrum: source?.spectrum ?? "unknown",
+      url: article.url,
+      publishedAt: article.published_at,
+      fetchedAt: article.fetched_at,
+      evidenceSnippet: evidenceSnippet || null,
+    };
+  });
+  const evidenceArticleCount = promptArticles.filter((article) => article.evidenceSnippet).length;
   const payload = {
     candidate: {
       slug: candidate.slug,
       title: candidate.title,
       metadata: candidate.metadata,
     },
-    articles: articles.map((article) => {
-      const source = getSource(article);
-
-      return {
-        id: article.id,
-        title: article.title,
-        outlet: source?.name ?? "Unknown source",
-        spectrum: source?.spectrum ?? "unknown",
-        url: article.url,
-        publishedAt: article.published_at,
-        fetchedAt: article.fetched_at,
-      };
-    }),
+    articles: promptArticles,
     instructions: {
-      goal: "Produce draft event analysis from article metadata only.",
+      goal: "Produce draft event analysis from article metadata and bounded extracted evidence snippets.",
+      evidenceArticleCount,
+      maxEvidenceCharsPerArticle: runtimeConfig.maxEvidenceCharsPerArticle,
+      maxEvidenceCharsPerEvent: runtimeConfig.maxEvidenceCharsPerEvent,
       allowedSourceArticleIdsByFrameBucket: articleIdsByBucket,
       constraints: [
-        "Do not claim certainty beyond the provided article metadata.",
-        "Use only the supplied source names, titles, URLs, and timestamps; do not infer unstated article body details.",
-        "Do not assign current or former offices, roles, motives, locations, or identities unless that exact detail appears in the supplied metadata.",
-        "Prefer cautious wording such as reports, says, alleged, suspected, or according to titles when metadata is incomplete.",
+        "Do not claim certainty beyond the supplied metadata and evidence snippets.",
+        "Use only the supplied source names, titles, URLs, timestamps, and evidenceSnippet fields; do not infer unstated article body details.",
+        "Do not assign current or former offices, roles, motives, locations, or identities unless that exact detail appears in the supplied metadata or evidence snippets.",
+        "Prefer cautious wording such as reports, says, alleged, suspected, or according to titles/snippets when evidence is incomplete.",
         "Do not quote article text.",
         "Keep the event unpublished.",
         "Return 3 to 6 concrete sharedFacts about the event itself. Do not include generic facts about sources, metadata, or publication volume.",
@@ -284,7 +324,7 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
         `Represented source buckets: ${representedBuckets.join(", ")}.`,
         "If a bucket has no sources, omit that frame entirely.",
         "loadedLanguage means notable framing terms or charged wording from titles/metadata, not the human language of the article.",
-        "Each frame summary must explicitly reflect the available source mix and title patterns; do not invent broader themes that are not visible in titles.",
+        "Each frame summary must explicitly reflect the available source mix, title patterns, and evidence snippets; do not invent broader themes that are not visible in the supplied material.",
         "sourceArticleIds may be empty; the system will attach same-bucket source articles after validation.",
         "Return JSON matching the requested schema.",
       ],
@@ -302,7 +342,7 @@ async function fetchCandidates(
   const { data, error } = await supabase
     .from("events")
     .select(
-      "id,slug,title,metadata,event_articles(articles(id,title,url,published_at,fetched_at,sources(name,spectrum)))",
+      "id,slug,title,metadata,event_articles(articles(id,title,url,published_at,fetched_at,sources(name,spectrum),article_evidence(extraction_status,evidence_text,evidence_char_count,extracted_at)))",
     )
     .eq("is_published", false)
     .eq("metadata->>candidate", "true")
@@ -425,6 +465,7 @@ async function writeAnalysisRun(
   supabase: ReturnType<typeof createServiceSupabaseClient>,
   candidate: CandidateRow,
   articleIds: string[],
+  evidenceArticleCount: number,
   metadata: {
     provider: string;
     model: string;
@@ -445,6 +486,9 @@ async function writeAnalysisRun(
     output: {
       schema: PROMPT_VERSION,
       candidateSlug: candidate.slug,
+      evidenceArticleCount,
+      maxEvidenceCharsPerArticle: runtimeConfig.maxEvidenceCharsPerArticle,
+      maxEvidenceCharsPerEvent: runtimeConfig.maxEvidenceCharsPerEvent,
     },
     finished_at: new Date().toISOString(),
   });
@@ -491,6 +535,9 @@ async function main() {
       .filter((article): article is ArticleRow => Boolean(article))
       .slice(0, runtimeConfig.maxArticlesPerEvent);
     const articleIds = articles.map((article) => article.id);
+    const evidenceArticleCount = articles.filter(
+      (article) => getEvidence(article)?.extraction_status === "succeeded",
+    ).length;
 
     if (articles.length === 0) {
       continue;
@@ -532,7 +579,7 @@ async function main() {
     await updateEvent(supabase, candidate, enrichment);
     await replaceClaims(supabase, candidate.id, articleIds, enrichment);
     await replaceFrames(supabase, candidate.id, enrichment);
-    await writeAnalysisRun(supabase, candidate, articleIds, {
+    await writeAnalysisRun(supabase, candidate, articleIds, evidenceArticleCount, {
       ...result.metadata,
       estimatedCostUsd: runEstimatedCostUsd,
     });
