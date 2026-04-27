@@ -64,5 +64,16 @@ npm run analyze:manual
 npm run publish:manual
 ```
 
-They currently fail closed until live analysis is explicitly enabled and
-required server secrets are present.
+`ingest:manual` syncs the starter source catalog and imports recent article
+metadata from GDELT into Supabase. It does not create events, publish rows, or
+call an LLM. It requires `DATA_MODE=imported`, `SUPABASE_URL`, and
+`SUPABASE_SERVICE_ROLE_KEY`.
+
+`analyze:manual` is reserved for the private clustering and LLM analysis phase.
+`publish:manual` publishes already-prepared event analysis through the
+Supabase/RLS read path.
+
+All manual jobs are capped by environment variables such as
+`MAX_DISCOVERY_QUERIES_PER_RUN`, `MAX_ARTICLES_PER_DISCOVERY_QUERY`,
+`MAX_ARTICLES_PER_INGEST_RUN`, `MAX_EVENTS_PER_RUN`, and
+`MAX_LLM_CALLS_PER_RUN`.

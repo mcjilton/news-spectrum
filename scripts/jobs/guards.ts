@@ -28,10 +28,27 @@ export function assertManualPublishEnabled(jobName: string) {
   }
 }
 
+export function assertManualIngestionEnabled(jobName: string) {
+  if (runtimeConfig.dataMode !== "imported") {
+    throw new Error(
+      `${jobName} blocked: DATA_MODE must be imported so discovered article metadata lands in the deployed database.`,
+    );
+  }
+
+  if (!runtimeConfig.supabaseUrl || !runtimeConfig.supabaseServiceRoleKey) {
+    throw new Error(
+      `${jobName} blocked: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for private ingestion.`,
+    );
+  }
+}
+
 export function printJobBudget() {
   console.log("Job budget caps:");
   console.log(`- max events per run: ${runtimeConfig.maxEventsPerRun}`);
   console.log(`- max articles per event: ${runtimeConfig.maxArticlesPerEvent}`);
+  console.log(`- max discovery queries per run: ${runtimeConfig.maxDiscoveryQueriesPerRun}`);
+  console.log(`- max articles per discovery query: ${runtimeConfig.maxArticlesPerDiscoveryQuery}`);
+  console.log(`- max articles per ingest run: ${runtimeConfig.maxArticlesPerIngestRun}`);
   console.log(`- max LLM calls per run: ${runtimeConfig.maxLlmCallsPerRun}`);
   console.log(
     `- max estimated LLM cost per run: $${runtimeConfig.maxLlmEstimatedCostUsdPerRun}`,

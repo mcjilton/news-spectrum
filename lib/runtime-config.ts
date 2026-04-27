@@ -55,6 +55,9 @@ export const runtimeConfig = {
   maxArticlesPerEvent: intEnv("MAX_ARTICLES_PER_EVENT", 40),
   maxLlmCallsPerRun: intEnv("MAX_LLM_CALLS_PER_RUN", 25),
   maxLlmEstimatedCostUsdPerRun: floatEnv("MAX_LLM_ESTIMATED_COST_USD_PER_RUN", 2),
+  maxDiscoveryQueriesPerRun: intEnv("MAX_DISCOVERY_QUERIES_PER_RUN", 8),
+  maxArticlesPerDiscoveryQuery: intEnv("MAX_ARTICLES_PER_DISCOVERY_QUERY", 15),
+  maxArticlesPerIngestRun: intEnv("MAX_ARTICLES_PER_INGEST_RUN", 80),
 } as const;
 
 export function assertRuntimeSecret(name: string, value: string) {

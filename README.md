@@ -41,6 +41,16 @@ Imported Supabase data can be checked through the public/RLS path with:
 npm run verify:imported
 ```
 
+Private article discovery can be run manually after Supabase service-role
+secrets are available in the current shell:
+
+```bash
+npm run ingest:manual
+```
+
+The ingestion script imports source and article metadata only. It does not
+publish events or run model analysis.
+
 ## Deployment Notes
 
 The public app is read-only. Readers can view generated analysis and source
