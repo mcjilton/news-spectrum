@@ -16,17 +16,10 @@ import {
   type EventSource,
   type SpectrumBucket,
 } from "@/lib/events";
-import { serverConfig } from "@/lib/config";
 
 const buckets: SpectrumBucket[] = ["left", "center", "right"];
 
 export const revalidate = 300;
-
-const dataModeLabels = {
-  seed: "Seed data",
-  imported: "Supabase import",
-  live: "Live pipeline",
-} as const;
 
 function countBucketSources(
   sources: EventSource[],
@@ -57,28 +50,11 @@ export default async function HomePage() {
           <p className="eyebrow">Prototype workspace</p>
           <h1>Compare the facts everyone cites with the spin each side adds.</h1>
           <p className="lede">
-            A fast, source-linked briefing surface for politically curious readers.
-            The MVP starts with seeded analysis data, then moves to live ingestion,
-            clustering, and LLM-assisted framing summaries.
+            A source-linked briefing surface for seeing how far apart coverage can
+            drift around the same events. The goal is to make competing frames
+            plain, expose echo-chamber distance, and support more civil,
+            productive discourse over entrenched one-sided thinking.
           </p>
-        </div>
-        <div className="heroPanel" aria-label="System status">
-          <div className="metric">
-            <span>Published events</span>
-            <strong>{events.length}</strong>
-          </div>
-          <div className="metric">
-            <span>Data source</span>
-            <strong>{dataModeLabels[serverConfig.dataMode]}</strong>
-          </div>
-          <div className="metric">
-            <span>Analysis mode</span>
-            <strong>AI-assisted</strong>
-          </div>
-          <div className="metric">
-            <span>Editorial curation</span>
-            <strong>None</strong>
-          </div>
         </div>
       </section>
 

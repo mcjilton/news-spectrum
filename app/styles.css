@@ -80,7 +80,14 @@ button {
   font-size: 0.92rem;
 }
 
-.hero,
+.hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  align-items: stretch;
+  padding: 42px 0 28px;
+}
+
 .detailHero {
   display: grid;
   grid-template-columns: 1fr minmax(280px, 360px);
@@ -96,6 +103,18 @@ button {
   font-size: clamp(2.1rem, 4vw, 4.35rem);
   line-height: 1.02;
   letter-spacing: 0;
+}
+
+.heroCopy {
+  max-width: 980px;
+}
+
+.hero .heroCopy h1 {
+  max-width: 980px;
+}
+
+.hero .lede {
+  max-width: 920px;
 }
 
 .detailHero h1 {
@@ -121,7 +140,6 @@ button {
   line-height: 1.6;
 }
 
-.heroPanel,
 .scorePanel {
   display: grid;
   gap: 10px;
@@ -133,7 +151,6 @@ button {
   box-shadow: var(--shadow);
 }
 
-.metric,
 .scorePanel div {
   position: relative;
   display: flex;
@@ -145,12 +162,10 @@ button {
   color: var(--muted);
 }
 
-.metric:last-child,
 .scorePanel div:last-child {
   border-bottom: 0;
 }
 
-.metric strong,
 .scorePanel strong {
   color: var(--ink);
   font-size: 1.02rem;
@@ -237,8 +252,7 @@ button {
   line-height: 1.55;
 }
 
-.status,
-.prototypeBadge {
+.status {
   flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -631,9 +645,5 @@ button {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .prototypeBadge {
-    max-width: 100%;
   }
 }
