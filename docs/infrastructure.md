@@ -82,6 +82,10 @@ Source spectrum and type labels currently come from the maintained starter
 catalog. Labels with `rating_source = starter-catalog` should be treated as
 provisional until a third-party `rating_url` or other documented provenance is
 attached.
+The catalog intentionally includes issue-specialist and policy sources so
+clusters can capture not only general news coverage but also policy-focused
+framing around law, courts, health, budget, immigration, civil liberties, foreign
+affairs, and economic issues.
 
 `analyze:manual` clusters recent, unlinked article metadata into unpublished
 candidate events. The first pass is deterministic title-token clustering: it
