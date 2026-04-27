@@ -64,10 +64,10 @@ const clusterMergeDecisionSchema = {
   },
 } as const;
 
-function metadata(task: ModelTask, sourceIds: string[] = []): ModelRunMetadata {
+function metadata(task: ModelTask, sourceIds: string[] = [], model?: string): ModelRunMetadata {
   return {
     provider: "openai",
-    model: task === "embed" ? runtimeConfig.modelEmbeddings : runtimeConfig.modelSummary,
+    model: model ?? (task === "embed" ? runtimeConfig.modelEmbeddings : runtimeConfig.modelSummary),
     task,
     promptVersion: "openai-responses-v1",
     sourceIds,
@@ -107,26 +107,46 @@ function assertOpenAiModelConfigured(task: ModelTask) {
   return model;
 }
 
+function openAiRequestOptions(input: GenerateTextInput, model: string) {
+  return {
+    model,
+    input: input.prompt,
+    ...(input.reasoningEffort
+      ? {
+          reasoning: {
+            effort: input.reasoningEffort,
+          },
+        }
+      : {}),
+  };
+}
+
 export const openAiProvider: ModelProvider = {
   async generateText(input: GenerateTextInput): Promise<TextModelResult> {
-    const model = assertOpenAiModelConfigured(input.task);
+    const model = input.model ?? assertOpenAiModelConfigured(input.task);
     const response = await client().responses.create({
-      model,
-      input: input.prompt,
+      ...openAiRequestOptions(input, model),
+      ...(input.textVerbosity
+        ? {
+            text: {
+              verbosity: input.textVerbosity,
+            },
+          }
+        : {}),
     });
 
     return {
       text: response.output_text,
-      metadata: metadata(input.task, input.sourceIds),
+      metadata: metadata(input.task, input.sourceIds, model),
     };
   },
 
   async generateJson<T>(input: GenerateJsonInput): Promise<JsonModelResult<T>> {
-    const model = assertOpenAiModelConfigured(input.task);
+    const model = input.model ?? assertOpenAiModelConfigured(input.task);
     const response = await client().responses.create({
-      model,
-      input: input.prompt,
+      ...openAiRequestOptions(input, model),
       text: {
+        ...(input.textVerbosity ? { verbosity: input.textVerbosity } : {}),
         format: {
           type: "json_schema",
           name: input.schemaName,
@@ -138,7 +158,7 @@ export const openAiProvider: ModelProvider = {
 
     return {
       json: JSON.parse(response.output_text) as T,
-      metadata: metadata(input.task, input.sourceIds),
+      metadata: metadata(input.task, input.sourceIds, model),
     };
   },
 

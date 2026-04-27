@@ -1,21 +1,22 @@
 import crypto from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 import { getRuntimeModelProvider } from "../../lib/ai/runtime-provider.ts";
 import { runtimeConfig } from "../../lib/runtime-config.ts";
 import { createServiceSupabaseClient } from "../../lib/supabase/runtime.ts";
 import { assertManualAnalysisEnabled, assertPrivateJobsEnabled, printJobBudget } from "./guards.ts";
 
-const PROMPT_VERSION = "event-enrichment-v1";
+export const PROMPT_VERSION = "event-enrichment-v1";
 
-type SpectrumBucket = "left" | "center" | "right";
-type SourceSpectrum = "left" | "lean_left" | "center" | "lean_right" | "right" | "unknown";
+export type SpectrumBucket = "left" | "center" | "right";
+export type SourceSpectrum = "left" | "lean_left" | "center" | "lean_right" | "right" | "unknown";
 
-type SourceRow = {
+export type SourceRow = {
   name: string;
   spectrum: SourceSpectrum;
 };
 
-type ArticleRow = {
+export type ArticleRow = {
   id: string;
   title: string;
   url: string;
@@ -25,14 +26,14 @@ type ArticleRow = {
   article_evidence: EvidenceRow | EvidenceRow[] | null;
 };
 
-type EvidenceRow = {
+export type EvidenceRow = {
   extraction_status: string;
   evidence_text: string | null;
   evidence_char_count: number;
   extracted_at: string | null;
 };
 
-type CandidateRow = {
+export type CandidateRow = {
   id: string;
   slug: string;
   title: string;
@@ -42,7 +43,7 @@ type CandidateRow = {
   }>;
 };
 
-type EnrichmentFrame = {
+export type EnrichmentFrame = {
   bucket: SpectrumBucket;
   label: string;
   summary: string;
@@ -51,7 +52,7 @@ type EnrichmentFrame = {
   sourceArticleIds: string[];
 };
 
-type EventEnrichment = {
+export type EventEnrichment = {
   title: string;
   summary: string;
   confidence: number;
@@ -61,7 +62,7 @@ type EventEnrichment = {
   frames: EnrichmentFrame[];
 };
 
-type EnrichOptions = {
+export type EnrichOptions = {
   dryRun: boolean;
   refreshEnriched: boolean;
 };
@@ -73,7 +74,7 @@ function parseOptions(): EnrichOptions {
   };
 }
 
-function getArticle(link: CandidateRow["event_articles"][number]) {
+export function getArticle(link: CandidateRow["event_articles"][number]) {
   return Array.isArray(link.articles) ? link.articles[0] : link.articles;
 }
 
@@ -81,7 +82,7 @@ function getSource(article: ArticleRow) {
   return Array.isArray(article.sources) ? article.sources[0] : article.sources;
 }
 
-function getEvidence(article: ArticleRow) {
+export function getEvidence(article: ArticleRow) {
   return Array.isArray(article.article_evidence)
     ? article.article_evidence[0]
     : article.article_evidence;
@@ -164,7 +165,7 @@ function fallbackFrames(articles: ArticleRow[]): EnrichmentFrame[] {
   }));
 }
 
-function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, articles: ArticleRow[]) {
+export function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, articles: ArticleRow[]) {
   const fallbackFacts = ["Multiple sources published article metadata for this candidate event."];
   const frames = Array.isArray(value.frames) && value.frames.length > 0 ? value.frames : fallbackFrames(articles);
   const concreteSharedFacts = coerceTextList(value.sharedFacts)
@@ -195,7 +196,7 @@ function normalizeEnrichment(value: EventEnrichment, candidate: CandidateRow, ar
   };
 }
 
-function validateEnrichment(value: unknown, articles: ArticleRow[]) {
+export function validateEnrichment(value: unknown, articles: ArticleRow[]) {
   const errors: string[] = [];
   const representedBuckets = new Set(
     articles.map((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown")),
@@ -267,7 +268,7 @@ function validateEnrichment(value: unknown, articles: ArticleRow[]) {
   return errors;
 }
 
-function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
+export function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
   const representedBuckets = [
     ...new Set(
       articles.map((article) => bucketForSpectrum(getSource(article)?.spectrum ?? "unknown")),
@@ -319,6 +320,8 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
         "Prefer cautious wording such as reports, says, alleged, suspected, or according to titles/snippets when evidence is incomplete.",
         "Do not quote article text.",
         "Keep the event unpublished.",
+        "confidence is a 0-100 percentage-like score for how well the supplied material supports the generated analysis; use typical values such as 65, 80, or 90 rather than a 0-5 scale.",
+        "divergence is a 0-100 percentage-like score for how differently represented source buckets frame the event; use typical values such as 15 for low divergence, 50 for mixed framing, or 80 for very high divergence.",
         "Return 3 to 6 concrete sharedFacts about the event itself. Do not include generic facts about sources, metadata, or publication volume.",
         "Only include frames for represented source buckets.",
         `Represented source buckets: ${representedBuckets.join(", ")}.`,
@@ -334,7 +337,7 @@ function buildPrompt(candidate: CandidateRow, articles: ArticleRow[]) {
   return JSON.stringify(payload, null, 2);
 }
 
-async function fetchCandidates(
+export async function fetchCandidates(
   supabase: ReturnType<typeof createServiceSupabaseClient>,
   options: EnrichOptions,
 ) {
@@ -596,7 +599,9 @@ async function main() {
   console.log("No events were published.");
 }
 
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

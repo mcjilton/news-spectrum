@@ -100,12 +100,15 @@ tokens:
 npm run enrich:manual
 npm run enrich:manual -- --dry-run
 npm run enrich:manual -- --refresh-enriched --dry-run
+npm run enrich:compare -- --models gpt-4o-mini,gpt-5.5 --reasoning-effort low --dry-run
 ```
 
 Live OpenAI enrichment is fail-closed. It requires `MODEL_PROVIDER=openai`, a
 real `MODEL_SUMMARY`, `OPENAI_API_KEY`, `DISABLE_LIVE_ANALYSIS=false`, and a
 positive `LLM_ESTIMATED_COST_USD_PER_CALL`. Use `--refresh-enriched` only when
 an unpublished candidate changed after enrichment, such as after a manual merge.
+Comparison runs write private `analysis_runs` records only; they do not update
+event summaries, claims, frames, or publication state.
 
 Selected enriched candidates can be published manually:
 

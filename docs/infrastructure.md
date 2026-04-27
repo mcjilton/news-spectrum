@@ -64,6 +64,7 @@ npm run analyze:manual
 npm run merge:manual -- --dry-run
 npm run extract:evidence -- --dry-run
 npm run enrich:manual
+npm run enrich:compare -- --models gpt-4o-mini,gpt-5.5 --reasoning-effort low --dry-run
 npm run inspect:candidates
 npm run inspect:enriched
 npm run candidates:reset
@@ -111,6 +112,11 @@ Live OpenAI enrichment is fail-closed: it requires `MODEL_PROVIDER=openai`,
 positive `LLM_ESTIMATED_COST_USD_PER_CALL`. Non-mock enrichment is limited to
 one candidate per run initially and checks the configured estimated-cost cap
 before each model call.
+
+`enrich:compare` runs the normal enrichment prompt against one unpublished
+candidate with one or more model names and records private comparison output in
+`analysis_runs`. It never overwrites event summaries, claims, frames, or
+publication state. Use it for model bakeoffs before changing `MODEL_SUMMARY`.
 
 `inspect:candidates` reads unpublished candidate events through the private
 service-role path and prints compact source/article details for quality review.

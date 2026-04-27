@@ -10,6 +10,9 @@ export type GenerateTextInput = {
   task: Exclude<ModelTask, "embed">;
   prompt: string;
   sourceIds?: string[];
+  model?: string;
+  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
+  textVerbosity?: "low" | "medium" | "high";
 };
 
 export type GenerateJsonInput = GenerateTextInput & {
