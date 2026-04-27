@@ -78,6 +78,10 @@ metadata from GDELT into Supabase. It does not create events, publish rows, or
 call an LLM. It requires `DATA_MODE=imported`, `SUPABASE_URL`, and
 `SUPABASE_SERVICE_ROLE_KEY`. Article URLs are canonicalized before storage so
 regional hosts and tracking parameters do not create duplicate candidates.
+Source spectrum and type labels currently come from the maintained starter
+catalog. Labels with `rating_source = starter-catalog` should be treated as
+provisional until a third-party `rating_url` or other documented provenance is
+attached.
 
 `analyze:manual` clusters recent, unlinked article metadata into unpublished
 candidate events. The first pass is deterministic title-token clustering: it

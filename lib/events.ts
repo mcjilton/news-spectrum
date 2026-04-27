@@ -29,6 +29,9 @@ export type EventSource = {
   rating: string;
   type: SourceType;
   frame: string;
+  ratingSource: string;
+  ratingUrl: string | null;
+  labelProvenance: string;
 };
 
 export type SpectrumAnalysis = {
@@ -69,6 +72,8 @@ type ImportedSourceRow = {
     | "policy"
     | "state_media"
     | "unknown";
+  rating_source: string | null;
+  rating_url: string | null;
 };
 
 type ImportedArticleRow = {
@@ -134,6 +139,17 @@ export const signalIcons: Record<string, LucideIcon> = {
   sources: FileText,
   status: CircleDot,
 };
+
+export function sourceLabelProvenance(source: {
+  ratingSource?: string | null;
+  ratingUrl?: string | null;
+}) {
+  if (source.ratingSource && source.ratingSource !== "starter-catalog") {
+    return `Label source: ${source.ratingSource}`;
+  }
+
+  return "Provisional catalog label";
+}
 
 export const events: NewsEvent[] = [
   {
@@ -203,6 +219,9 @@ export const events: NewsEvent[] = [
         rating: "Lean Left",
         type: "partisan",
         frame: "Humanitarian capacity",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
       {
         id: "border-left-2",
@@ -214,6 +233,9 @@ export const events: NewsEvent[] = [
         rating: "Lean Left",
         type: "local",
         frame: "Local service pressure",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
       {
         id: "border-center-1",
@@ -225,6 +247,9 @@ export const events: NewsEvent[] = [
         rating: "Center",
         type: "wire",
         frame: "Legislative process",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
       {
         id: "border-center-2",
@@ -236,6 +261,9 @@ export const events: NewsEvent[] = [
         rating: "Center",
         type: "policy",
         frame: "Policy mechanics",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
       {
         id: "border-right-1",
@@ -247,6 +275,9 @@ export const events: NewsEvent[] = [
         rating: "Right",
         type: "partisan",
         frame: "State authority",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
       {
         id: "border-right-2",
@@ -258,6 +289,9 @@ export const events: NewsEvent[] = [
         rating: "Lean Right",
         type: "mainstream",
         frame: "Enforcement test",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
     ],
   },
@@ -322,6 +356,9 @@ export const events: NewsEvent[] = [
         rating: "Left",
         type: "policy",
         frame: "Civil liberties",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
       {
         id: "campus-center-1",
@@ -333,6 +370,9 @@ export const events: NewsEvent[] = [
         rating: "Center",
         type: "wire",
         frame: "Oversight",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
       {
         id: "campus-right-1",
@@ -344,6 +384,9 @@ export const events: NewsEvent[] = [
         rating: "Right",
         type: "opinion-heavy",
         frame: "Institutional bias",
+        ratingSource: "starter-catalog",
+        ratingUrl: null,
+        labelProvenance: "Provisional catalog label",
       },
     ],
   },
@@ -422,6 +465,12 @@ function mapImportedEvent(row: ImportedEventRow): NewsEvent {
         rating: article.metadata?.rating ?? bucketLabels[bucket],
         type: mapSourceType(source.source_type),
         frame: article.metadata?.frame ?? "Coverage",
+        ratingSource: source.rating_source ?? "starter-catalog",
+        ratingUrl: source.rating_url ?? null,
+        labelProvenance: sourceLabelProvenance({
+          ratingSource: source.rating_source,
+          ratingUrl: source.rating_url,
+        }),
       };
     })
     .filter((source): source is EventSource => source !== null);
@@ -487,7 +536,9 @@ async function getImportedEvents() {
             sources (
               name,
               spectrum,
-              source_type
+              source_type,
+              rating_source,
+              rating_url
             )
           )
         )

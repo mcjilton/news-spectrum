@@ -591,6 +591,11 @@ button {
   color: var(--muted);
 }
 
+.sourceProvenance {
+  color: #71838c;
+  font-size: 0.72rem;
+}
+
 .methodNote {
   margin-top: 24px;
   padding: 18px;

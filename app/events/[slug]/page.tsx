@@ -161,6 +161,7 @@ export default async function EventPage({
                   <span>
                     <strong>{source.outlet}</strong>
                     <small>{source.rating} · {source.type} · {source.publishedAt}</small>
+                    <small className="sourceProvenance">{source.labelProvenance}</small>
                   </span>
                   <span>{source.title}</span>
                   <span className="framePill">{source.frame}</span>

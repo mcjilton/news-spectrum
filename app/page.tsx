@@ -158,7 +158,8 @@ export default async function HomePage() {
             <p>
               The MVP favors breadth: mainstream, wire, local, partisan,
               opinion-heavy, and policy sources can all be included when clearly
-              labeled and weighted.
+              labeled. Current source labels are provisional catalog metadata
+              unless a third-party label source is shown.
             </p>
           </div>
         </div>
