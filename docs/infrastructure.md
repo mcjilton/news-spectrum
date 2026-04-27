@@ -86,6 +86,11 @@ The catalog intentionally includes issue-specialist and policy sources so
 clusters can capture not only general news coverage but also policy-focused
 framing around law, courts, health, budget, immigration, civil liberties, foreign
 affairs, and economic issues.
+Every catalog source has an `accessProfile` of `open`, `metered`,
+`hard_paywall`, or `unknown`. Enabled hard-paywall sources should be avoided;
+metered sources may still be useful for metadata and public snippets, but should
+not be relied on for full-text evidence extraction. Run `npm run
+sources:validate` after catalog edits.
 
 `analyze:manual` clusters recent, unlinked article metadata into unpublished
 candidate events. The first pass is deterministic title-token clustering: it
