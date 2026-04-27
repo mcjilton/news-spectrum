@@ -58,6 +58,9 @@ export const runtimeConfig = {
   maxDiscoveryQueriesPerRun: intEnv("MAX_DISCOVERY_QUERIES_PER_RUN", 8),
   maxArticlesPerDiscoveryQuery: intEnv("MAX_ARTICLES_PER_DISCOVERY_QUERY", 15),
   maxArticlesPerIngestRun: intEnv("MAX_ARTICLES_PER_INGEST_RUN", 80),
+  minArticlesPerCluster: intEnv("MIN_ARTICLES_PER_CLUSTER", 2),
+  minSourcesPerCluster: intEnv("MIN_SOURCES_PER_CLUSTER", 2),
+  clusterSimilarityThreshold: floatEnv("CLUSTER_SIMILARITY_THRESHOLD", 0.3),
 } as const;
 
 export function assertRuntimeSecret(name: string, value: string) {

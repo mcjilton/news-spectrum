@@ -42,6 +42,20 @@ export function assertManualIngestionEnabled(jobName: string) {
   }
 }
 
+export function assertManualAnalysisEnabled(jobName: string) {
+  if (runtimeConfig.dataMode !== "imported") {
+    throw new Error(
+      `${jobName} blocked: DATA_MODE must be imported so private candidate analysis writes to the deployed database.`,
+    );
+  }
+
+  if (!runtimeConfig.supabaseUrl || !runtimeConfig.supabaseServiceRoleKey) {
+    throw new Error(
+      `${jobName} blocked: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for private analysis.`,
+    );
+  }
+}
+
 export function printJobBudget() {
   console.log("Job budget caps:");
   console.log(`- max events per run: ${runtimeConfig.maxEventsPerRun}`);
@@ -49,6 +63,9 @@ export function printJobBudget() {
   console.log(`- max discovery queries per run: ${runtimeConfig.maxDiscoveryQueriesPerRun}`);
   console.log(`- max articles per discovery query: ${runtimeConfig.maxArticlesPerDiscoveryQuery}`);
   console.log(`- max articles per ingest run: ${runtimeConfig.maxArticlesPerIngestRun}`);
+  console.log(`- min articles per cluster: ${runtimeConfig.minArticlesPerCluster}`);
+  console.log(`- min sources per cluster: ${runtimeConfig.minSourcesPerCluster}`);
+  console.log(`- cluster similarity threshold: ${runtimeConfig.clusterSimilarityThreshold}`);
   console.log(`- max LLM calls per run: ${runtimeConfig.maxLlmCallsPerRun}`);
   console.log(
     `- max estimated LLM cost per run: $${runtimeConfig.maxLlmEstimatedCostUsdPerRun}`,

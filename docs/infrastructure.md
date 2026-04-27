@@ -69,11 +69,18 @@ metadata from GDELT into Supabase. It does not create events, publish rows, or
 call an LLM. It requires `DATA_MODE=imported`, `SUPABASE_URL`, and
 `SUPABASE_SERVICE_ROLE_KEY`.
 
-`analyze:manual` is reserved for the private clustering and LLM analysis phase.
+`analyze:manual` clusters recent, unlinked article metadata into unpublished
+candidate events. The first pass is deterministic title-token clustering: it
+does not scrape article bodies, publish events, create claims/frames, or call an
+LLM. Later analysis passes can enrich these candidates with LLM-generated facts
+and framing analysis before publication.
+
 `publish:manual` publishes already-prepared event analysis through the
 Supabase/RLS read path.
 
 All manual jobs are capped by environment variables such as
 `MAX_DISCOVERY_QUERIES_PER_RUN`, `MAX_ARTICLES_PER_DISCOVERY_QUERY`,
-`MAX_ARTICLES_PER_INGEST_RUN`, `MAX_EVENTS_PER_RUN`, and
+`MAX_ARTICLES_PER_INGEST_RUN`, `MAX_EVENTS_PER_RUN`,
+`MAX_ARTICLES_PER_EVENT`, `MIN_ARTICLES_PER_CLUSTER`,
+`MIN_SOURCES_PER_CLUSTER`, `CLUSTER_SIMILARITY_THRESHOLD`, and
 `MAX_LLM_CALLS_PER_RUN`.

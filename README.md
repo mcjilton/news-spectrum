@@ -51,6 +51,15 @@ npm run ingest:manual
 The ingestion script imports source and article metadata only. It does not
 publish events or run model analysis.
 
+Private candidate clustering can be run after ingestion:
+
+```bash
+npm run analyze:manual
+```
+
+The current analysis job creates unpublished candidate events only. It does not
+run LLM analysis or expose new content to readers.
+
 ## Deployment Notes
 
 The public app is read-only. Readers can view generated analysis and source
