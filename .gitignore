@@ -293,6 +293,7 @@ data/
 
 # Logs and runtime output
 logs/
+reports/
 *.log
 *.pid
 *.seed

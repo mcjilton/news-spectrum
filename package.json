@@ -17,6 +17,7 @@
     "enrich:compare": "node --experimental-strip-types scripts/jobs/enrich-compare.ts",
     "inspect:candidates": "node --experimental-strip-types scripts/jobs/inspect-candidates.ts",
     "inspect:enriched": "node --experimental-strip-types scripts/jobs/inspect-enriched.ts",
+    "sources:probe-access": "node --experimental-strip-types scripts/jobs/probe-source-access.ts",
     "sources:validate": "node --experimental-strip-types scripts/jobs/validate-source-catalog.ts",
     "candidates:reset": "node --experimental-strip-types scripts/jobs/reset-candidates.ts",
     "mock:reset": "node --experimental-strip-types scripts/jobs/reset-mock.ts",

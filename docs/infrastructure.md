@@ -91,6 +91,9 @@ Every catalog source has an `accessProfile` of `open`, `metered`,
 metered sources may still be useful for metadata and public snippets, but should
 not be relied on for full-text evidence extraction. Run `npm run
 sources:validate` after catalog edits.
+Run `npm run sources:probe-access -- --max-sources 60 --samples-per-source 3`
+to sample recent URLs and generate `reports/source-access-probe.json` with
+measured extraction yield by source.
 
 `analyze:manual` clusters recent, unlinked article metadata into unpublished
 candidate events. The first pass is deterministic title-token clustering: it
