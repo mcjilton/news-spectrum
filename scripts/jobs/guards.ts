@@ -63,6 +63,8 @@ export function printJobBudget() {
   console.log(`- max discovery queries per run: ${runtimeConfig.maxDiscoveryQueriesPerRun}`);
   console.log(`- max articles per discovery query: ${runtimeConfig.maxArticlesPerDiscoveryQuery}`);
   console.log(`- max articles per ingest run: ${runtimeConfig.maxArticlesPerIngestRun}`);
+  console.log(`- RSS discovery enabled: ${runtimeConfig.enableRssDiscovery}`);
+  console.log(`- max aggregator feed items per run: ${runtimeConfig.maxAggregatorFeedItemsPerRun}`);
   console.log(`- max evidence articles per run: ${runtimeConfig.maxEvidenceArticlesPerRun}`);
   console.log(`- max evidence chars per article: ${runtimeConfig.maxEvidenceCharsPerArticle}`);
   console.log(`- max evidence chars per event: ${runtimeConfig.maxEvidenceCharsPerEvent}`);

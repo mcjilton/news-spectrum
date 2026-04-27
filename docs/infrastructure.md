@@ -74,10 +74,17 @@ npm run publish:manual
 ```
 
 `ingest:manual` syncs the starter source catalog and imports recent article
-metadata from GDELT into Supabase. It does not create events, publish rows, or
-call an LLM. It requires `DATA_MODE=imported`, `SUPABASE_URL`, and
-`SUPABASE_SERVICE_ROLE_KEY`. Article URLs are canonicalized before storage so
-regional hosts and tracking parameters do not create duplicate candidates.
+metadata into Supabase. It uses a discovery-provider abstraction so GDELT is no
+longer the only provider: source-level RSS feeds can be attached to catalog
+sources with `rssFeedUrls`, and Yahoo News RSS aggregator feeds are used as a
+fallback discovery source when the feed item identifies an original publisher
+that maps back to the catalog. Aggregator items preserve the Yahoo URL and store
+the original publisher metadata; they should be treated as discovery metadata,
+not as a replacement for first-party source links. The job does not create
+events, publish rows, or call an LLM. It requires `DATA_MODE=imported`,
+`SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`. Article URLs are canonicalized
+before storage so regional hosts and tracking parameters do not create duplicate
+candidates.
 Source spectrum and type labels currently come from the maintained starter
 catalog. Labels with `rating_source = starter-catalog` should be treated as
 provisional until a third-party `rating_url` or other documented provenance is
@@ -94,6 +101,9 @@ sources:validate` after catalog edits.
 Run `npm run sources:probe-access -- --max-sources 60 --samples-per-source 3`
 to sample recent URLs and generate `reports/source-access-probe.json` with
 measured extraction yield by source.
+RSS discovery is controlled by the non-secret `ENABLE_RSS_DISCOVERY` flag and
+`MAX_AGGREGATOR_FEED_ITEMS_PER_RUN` cap. Keep these conservative while tuning
+feed quality and source attribution.
 
 `analyze:manual` clusters recent, unlinked article metadata into unpublished
 candidate events. The first pass is deterministic title-token clustering: it

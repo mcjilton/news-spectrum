@@ -59,6 +59,8 @@ export const runtimeConfig = {
   maxDiscoveryQueriesPerRun: intEnv("MAX_DISCOVERY_QUERIES_PER_RUN", 8),
   maxArticlesPerDiscoveryQuery: intEnv("MAX_ARTICLES_PER_DISCOVERY_QUERY", 15),
   maxArticlesPerIngestRun: intEnv("MAX_ARTICLES_PER_INGEST_RUN", 80),
+  enableRssDiscovery: boolEnv("ENABLE_RSS_DISCOVERY", true),
+  maxAggregatorFeedItemsPerRun: intEnv("MAX_AGGREGATOR_FEED_ITEMS_PER_RUN", 60),
   maxEvidenceArticlesPerRun: intEnv("MAX_EVIDENCE_ARTICLES_PER_RUN", 25),
   maxEvidenceCharsPerArticle: intEnv("MAX_EVIDENCE_CHARS_PER_ARTICLE", 900),
   maxEvidenceCharsPerEvent: intEnv("MAX_EVIDENCE_CHARS_PER_EVENT", 18_000),

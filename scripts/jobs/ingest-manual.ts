@@ -1,31 +1,17 @@
 import crypto from "node:crypto";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 
+import {
+  aggregatorFeeds,
+  type DiscoveredArticle,
+  fetchAggregatorRssArticles,
+  fetchGdeltArticles,
+  fetchSourceRssArticles,
+} from "../../lib/discovery-providers.ts";
 import { runtimeConfig } from "../../lib/runtime-config.ts";
 import { sourceCatalog, type CatalogSource } from "../../lib/source-catalog.ts";
 import { createServiceSupabaseClient } from "../../lib/supabase/runtime.ts";
 import { safeCanonicalizeUrl } from "../../lib/url-utils.ts";
 import { assertManualIngestionEnabled, printJobBudget } from "./guards.ts";
-
-const GDELT_DOC_API_URL = "https://api.gdeltproject.org/api/v2/doc/doc";
-const GDELT_TIMESPAN = "24h";
-const execFileAsync = promisify(execFile);
-
-type GdeltArticle = {
-  url?: string;
-  title?: string;
-  seendate?: string;
-  domain?: string;
-  language?: string;
-  sourceCountry?: string;
-  socialimage?: string;
-  image?: string;
-};
-
-type GdeltResponse = {
-  articles?: GdeltArticle[];
-};
 
 type SourceRow = {
   id: string;
@@ -41,91 +27,22 @@ type ArticleInsert = {
   fetched_at: string;
   content_hash: string;
   metadata: {
-    provider: "gdelt";
+    provider: DiscoveredArticle["provider"];
     providerDomain: string;
     catalogDomain: string;
     sourceCountry?: string;
     sourceLanguage?: string;
     imageUrl?: string;
-    seenAt?: string;
+    description?: string;
+    feedUrl?: string;
+    aggregatorName?: string;
+    originalSourceName?: string;
+    originalSourceUrl?: string;
   };
 };
 
-function normalizeDomain(domain: string) {
-  return domain.toLowerCase().replace(/^www\./, "");
-}
-
-function articleMatchesSource(article: GdeltArticle, source: CatalogSource) {
-  if (!article.domain) {
-    return true;
-  }
-
-  const articleDomain = normalizeDomain(article.domain);
-  const sourceDomain = normalizeDomain(source.gdeltDomain);
-  return articleDomain === sourceDomain || articleDomain.endsWith(`.${sourceDomain}`);
-}
-
-function parseGdeltDate(value: string | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const compactDateMatch = value.match(
-    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/,
-  );
-
-  if (compactDateMatch) {
-    const [, year, month, day, hour, minute, second] = compactDateMatch;
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-}
-
 function contentHash(url: string) {
   return crypto.createHash("sha256").update(url).digest("hex");
-}
-
-async function fetchGdeltArticles(source: CatalogSource) {
-  const params = new URLSearchParams({
-    query: `domain:${source.gdeltDomain} sourcelang:english`,
-    mode: "artlist",
-    format: "json",
-    maxrecords: String(runtimeConfig.maxArticlesPerDiscoveryQuery),
-    sort: "datedesc",
-    timespan: GDELT_TIMESPAN,
-  });
-
-  const url = `${GDELT_DOC_API_URL}?${params}`;
-  return fetchGdeltArticlesWithCurl(url, source.name);
-}
-
-async function fetchGdeltArticlesWithCurl(url: string, sourceName: string) {
-  const { stdout } = await execFileAsync(
-    "curl",
-    [
-      "-fsSL",
-      "--max-time",
-      "30",
-      "--retry",
-      "2",
-      "--retry-delay",
-      "2",
-      "--user-agent",
-      "news-spectrum-ingest/0.1",
-      url,
-    ],
-    {
-      maxBuffer: 1024 * 1024,
-    },
-  ).catch((error: unknown) => {
-    const curlMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`GDELT request failed for ${sourceName}: ${curlMessage}`);
-  });
-
-  const payload = JSON.parse(stdout) as GdeltResponse;
-  return payload.articles ?? [];
 }
 
 function delay(milliseconds: number) {
@@ -168,18 +85,16 @@ async function upsertSources(supabase: ReturnType<typeof createServiceSupabaseCl
 function toArticleInsert(
   source: CatalogSource,
   sourceId: string,
-  article: GdeltArticle,
+  article: DiscoveredArticle,
   fetchedAt: string,
 ): ArticleInsert | null {
-  const url = article.url?.trim();
-  const title = article.title?.trim();
+  const url = article.url.trim();
+  const title = article.title.trim();
 
-  if (!url || !title || !articleMatchesSource(article, source)) {
+  if (!url || !title) {
     return null;
   }
 
-  const seenAt = parseGdeltDate(article.seendate);
-  const imageUrl = article.socialimage ?? article.image;
   const canonicalUrl = safeCanonicalizeUrl(url);
 
   return {
@@ -187,19 +102,37 @@ function toArticleInsert(
     url,
     canonical_url: canonicalUrl,
     title,
-    published_at: seenAt,
+    published_at: article.publishedAt,
     fetched_at: fetchedAt,
     content_hash: contentHash(canonicalUrl),
     metadata: {
-      provider: "gdelt",
-      providerDomain: article.domain ?? source.gdeltDomain,
+      provider: article.provider,
+      providerDomain: article.providerDomain,
       catalogDomain: source.gdeltDomain,
       sourceCountry: article.sourceCountry,
-      sourceLanguage: article.language,
-      imageUrl,
-      seenAt: article.seendate,
+      sourceLanguage: article.sourceLanguage,
+      imageUrl: article.imageUrl,
+      description: article.description,
+      feedUrl: article.feedUrl,
+      aggregatorName: article.aggregatorName,
+      originalSourceName: article.originalSourceName,
+      originalSourceUrl: article.originalSourceUrl,
     },
   };
+}
+
+function addDiscoveredArticle(
+  articlesByUrl: Map<string, ArticleInsert>,
+  source: CatalogSource,
+  sourceId: string,
+  article: DiscoveredArticle,
+  fetchedAt: string,
+) {
+  const row = toArticleInsert(source, sourceId, article, fetchedAt);
+
+  if (row) {
+    articlesByUrl.set(row.canonical_url, row);
+  }
 }
 
 async function main() {
@@ -215,6 +148,42 @@ async function main() {
   let failedQueries = 0;
   let discoveredArticles = 0;
 
+  if (runtimeConfig.enableRssDiscovery) {
+    for (const feed of aggregatorFeeds) {
+      console.log(`Discovering aggregator feed: ${feed.name} (${feed.feedUrl})`);
+      const feedArticles = await fetchAggregatorRssArticles(
+        feed,
+        enabledSources,
+        runtimeConfig.maxAggregatorFeedItemsPerRun,
+      ).catch((error: unknown) => {
+        failedQueries += 1;
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`Skipped ${feed.name}: ${message}`);
+        return [];
+      });
+
+      queriesRun += 1;
+      discoveredArticles += feedArticles.length;
+      console.log(`- provider articles: ${feedArticles.length}`);
+
+      for (const { source, article } of feedArticles) {
+        if (articlesByUrl.size >= runtimeConfig.maxArticlesPerIngestRun) {
+          break;
+        }
+
+        const sourceId = sourceIdsByName.get(source.name);
+
+        if (sourceId) {
+          addDiscoveredArticle(articlesByUrl, source, sourceId, article, fetchedAt);
+        }
+      }
+
+      if (articlesByUrl.size >= runtimeConfig.maxArticlesPerIngestRun) {
+        break;
+      }
+    }
+  }
+
   for (const [index, source] of querySources.entries()) {
     const sourceId = sourceIdsByName.get(source.name);
 
@@ -225,27 +194,40 @@ async function main() {
     console.log(
       `Discovering ${index + 1}/${querySources.length}: ${source.name} (${source.gdeltDomain})`,
     );
-    const articles = await fetchGdeltArticles(source).catch((error: unknown) => {
+    const rssArticles = runtimeConfig.enableRssDiscovery
+      ? await fetchSourceRssArticles(
+          source,
+          runtimeConfig.maxArticlesPerDiscoveryQuery,
+        ).catch((error: unknown) => {
+          failedQueries += 1;
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(`Skipped RSS for ${source.name}: ${message}`);
+          return [];
+        })
+      : [];
+    const gdeltArticles = await fetchGdeltArticles(
+      source,
+      runtimeConfig.maxArticlesPerDiscoveryQuery,
+    ).catch((error: unknown) => {
       failedQueries += 1;
       const message = error instanceof Error ? error.message : String(error);
-      console.warn(`Skipped ${source.name}: ${message}`);
+      console.warn(`Skipped GDELT for ${source.name}: ${message}`);
       return [];
     });
+    const articles = [...rssArticles, ...gdeltArticles];
 
     queriesRun += 1;
     discoveredArticles += articles.length;
-    console.log(`- provider articles: ${articles.length}`);
+    console.log(
+      `- provider articles: ${articles.length} (rss: ${rssArticles.length}; gdelt: ${gdeltArticles.length})`,
+    );
 
     for (const article of articles) {
       if (articlesByUrl.size >= runtimeConfig.maxArticlesPerIngestRun) {
         break;
       }
 
-      const row = toArticleInsert(source, sourceId, article, fetchedAt);
-
-      if (row) {
-        articlesByUrl.set(row.canonical_url, row);
-      }
+      addDiscoveredArticle(articlesByUrl, source, sourceId, article, fetchedAt);
     }
 
     if (articlesByUrl.size >= runtimeConfig.maxArticlesPerIngestRun) {

@@ -9,6 +9,7 @@ export type CatalogSource = {
   ratingUrl?: string;
   accessProfile: "open" | "metered" | "hard_paywall" | "unknown";
   gdeltDomain: string;
+  rssFeedUrls?: string[];
   enabled: boolean;
 };
 
